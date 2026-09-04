@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class LessonCreate(BaseModel):
@@ -8,7 +8,10 @@ class LessonCreate(BaseModel):
     class_name: str
     topic: str
     content: str
-    status: str = "draft"
+    status: str = Field(
+    default="draft",
+    pattern="^(draft|published|archived)$"
+)
 
 class LessonResponse(BaseModel):
     id: int

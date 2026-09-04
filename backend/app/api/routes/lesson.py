@@ -218,6 +218,7 @@ def update_lesson(
     existing_lesson.class_name = lesson.class_name
     existing_lesson.topic = lesson.topic
     existing_lesson.content = lesson.content
+    existing_lesson.status = lesson.status
 
     db.commit()
     db.refresh(existing_lesson)
