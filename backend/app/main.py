@@ -11,6 +11,7 @@ from app.api.routes.question import router as question_router
 from app.models.lesson import Lesson
 from app.models.quiz import Quiz
 from app.models.question import Question
+from app.models.option import QuizOption
 
 Base.metadata.create_all(bind=engine)
 
