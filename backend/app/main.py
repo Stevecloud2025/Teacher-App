@@ -8,6 +8,7 @@ from app.api.routes.lesson import router as lesson_router
 from app.api.routes.dashboard import router as dashboard_router
 from app.api.routes.quiz import router as quiz_router
 from app.api.routes.question import router as question_router
+from app.api.routes.option import router as option_router
 from app.models.lesson import Lesson
 from app.models.quiz import Quiz
 from app.models.question import Question
@@ -25,6 +26,7 @@ app.include_router(lesson_router)
 app.include_router(dashboard_router)
 app.include_router(quiz_router)
 app.include_router(question_router)
+app.include_router(option_router)
 
 
 @app.get("/")

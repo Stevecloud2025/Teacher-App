@@ -16,6 +16,9 @@ load_dotenv()
 # Import models so Alembic can detect them
 from app.models.teacher import Teacher
 from app.models.lesson import Lesson
+from app.models.quiz import Quiz
+from app.models.question import Question
+from app.models.option import QuizOption
 
 
 # this is the Alembic Config object
