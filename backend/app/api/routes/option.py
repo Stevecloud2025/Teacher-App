@@ -5,7 +5,11 @@ from app.database.database import get_db
 from app.models.option import QuizOption
 from app.models.question import Question
 from app.models.quiz import Quiz
-from app.schemas.option import QuizOptionCreate, QuizOptionResponse
+from app.schemas.option import (
+    QuizOptionCreate,
+    QuizOptionResponse,
+    QuizOptionUpdate
+)
 from app.api.dependencies import get_current_teacher
 
 
@@ -97,3 +101,69 @@ def get_option(
         )
 
     return option
+
+    @router.put("/{option_id}", response_model=QuizOptionResponse)
+    def update_option(
+    option_id: int,
+    option: QuizOptionUpdate,
+    teacher_id: str = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+     existing_option = db.query(QuizOption).join(
+        QuizOption.question
+    ).join(
+        Question.quiz
+    ).filter(
+        QuizOption.id == option_id,
+        QuizOption.question.has(
+            Question.quiz.has(
+                Quiz.teacher_id == int(teacher_id)
+            )
+        )
+    ).first()
+
+    if not existing_option:
+        raise HTTPException(
+            status_code=404,
+            detail="Option not found"
+        )
+
+    existing_option.option_text = option.option_text
+    existing_option.is_correct = option.is_correct
+
+    db.commit()
+    db.refresh(existing_option)
+
+    return existing_option
+
+@router.delete("/{option_id}")
+def delete_option(
+    option_id: int,
+    teacher_id: str = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    option = db.query(QuizOption).join(
+        QuizOption.question
+    ).join(
+        Question.quiz
+    ).filter(
+        QuizOption.id == option_id,
+        QuizOption.question.has(
+            Question.quiz.has(
+                Quiz.teacher_id == int(teacher_id)
+            )
+        )
+    ).first()
+
+    if not option:
+        raise HTTPException(
+            status_code=404,
+            detail="Option not found"
+        )
+
+    db.delete(option)
+    db.commit()
+
+    return {
+        "message": "Option deleted successfully"
+    }

@@ -20,3 +20,11 @@ class QuestionResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+        class QuestionUpdate(BaseModel):
+         question_text: str
+    question_type: str = Field(
+        default="multiple_choice",
+        pattern="^(multiple_choice|true_false|short_answer)$"
+    )
+    correct_answer: str
