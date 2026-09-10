@@ -45,3 +45,55 @@ def create_option(
     db.refresh(new_option)
 
     return new_option
+
+@router.get("/question/{question_id}", response_model=list[QuizOptionResponse])
+def get_question_options(
+    question_id: int,
+    teacher_id: str = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    question = db.query(Question).join(
+        Question.quiz
+    ).filter(
+        Question.id == question_id,
+        Quiz.teacher_id == int(teacher_id)
+    ).first()
+
+    if not question:
+        raise HTTPException(
+            status_code=404,
+            detail="Question not found"
+        )
+
+    options = db.query(QuizOption).filter(
+        QuizOption.question_id == question_id
+    ).all()
+
+    return options
+
+@router.get("/{option_id}", response_model=QuizOptionResponse)
+def get_option(
+    option_id: int,
+    teacher_id: str = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    option = db.query(QuizOption).join(
+        QuizOption.question
+    ).join(
+        Question.quiz
+    ).filter(
+        QuizOption.id == option_id,
+        QuizOption.question.has(
+            Question.quiz.has(
+                Quiz.teacher_id == int(teacher_id)
+            )
+        )
+    ).first()
+
+    if not option:
+        raise HTTPException(
+            status_code=404,
+            detail="Option not found"
+        )
+
+    return option

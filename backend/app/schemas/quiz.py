@@ -24,3 +24,38 @@ class QuizResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class QuizOptionResponseNested(BaseModel):
+    id: int
+    option_text: str
+    is_correct: bool
+
+    class Config:
+        from_attributes = True
+
+
+class QuestionResponseNested(BaseModel):
+    id: int
+    question_text: str
+    question_type: str
+    correct_answer: str
+    options: list[QuizOptionResponseNested] = []
+
+    class Config:
+        from_attributes = True
+
+
+class QuizDetailResponse(BaseModel):
+    id: int
+    title: str
+    description: str | None
+    lesson_id: int
+    teacher_id: int
+    status: str
+    created_at: datetime
+    updated_at: datetime
+    questions: list[QuestionResponseNested] = []
+
+    class Config:
+        from_attributes = True

@@ -4,7 +4,11 @@ from sqlalchemy.orm import Session
 from app.database.database import get_db
 from app.models.quiz import Quiz
 from app.models.lesson import Lesson
-from app.schemas.quiz import QuizCreate, QuizResponse
+from app.schemas.quiz import (
+    QuizCreate,
+    QuizResponse,
+    QuizDetailResponse
+)
 from app.api.dependencies import get_current_teacher
 
 
@@ -44,3 +48,36 @@ def create_quiz(
     db.refresh(new_quiz)
 
     return new_quiz
+
+
+@router.get("/", response_model=list[QuizResponse])
+def get_quizzes(
+    teacher_id: str = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    quizzes = db.query(Quiz).filter(
+        Quiz.teacher_id == int(teacher_id)
+    ).order_by(
+        Quiz.created_at.desc()
+    ).all()
+
+    return quizzes
+
+@router.get("/{quiz_id}", response_model=QuizDetailResponse)
+def get_quiz(
+    quiz_id: int,
+    teacher_id: str = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    quiz = db.query(Quiz).filter(
+        Quiz.id == quiz_id,
+        Quiz.teacher_id == int(teacher_id)
+    ).first()
+
+    if not quiz:
+        raise HTTPException(
+            status_code=404,
+            detail="Quiz not found"
+        )
+
+    return quiz
