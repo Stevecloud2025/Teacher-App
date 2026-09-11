@@ -60,15 +60,25 @@ class QuizDetailResponse(BaseModel):
     class Config:
         from_attributes = True
 
-        class QuizUpdate(BaseModel):
-         title: str
+
+class QuizUpdate(BaseModel):
+    title: str
     description: str | None = None
     status: str = Field(
         default="draft",
         pattern="^(draft|published|archived)$"
     )
 
-    class QuizStatusUpdate(BaseModel):
-     status: str = Field(
+
+class QuizStatusUpdate(BaseModel):
+    status: str = Field(
         pattern="^(draft|published|archived)$"
     )
+
+
+class QuizValidationResponse(BaseModel):
+    quiz_id: int
+    total_questions: int
+    valid_questions: int
+    invalid_questions: int
+    is_valid: bool

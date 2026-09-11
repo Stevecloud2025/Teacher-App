@@ -4,14 +4,16 @@ from sqlalchemy.orm import Session
 from app.database.database import get_db
 from app.models.quiz import Quiz
 from app.models.lesson import Lesson
+from app.models.question import Question
+from app.models.option import QuizOption
 from app.schemas.quiz import (
     QuizCreate,
     QuizResponse,
     QuizDetailResponse,
     QuizUpdate,
-    QuizStatusUpdate
+    QuizStatusUpdate,
+    QuizValidationResponse
 )
-
 from app.api.dependencies import get_current_teacher
 
 
@@ -66,6 +68,76 @@ def get_quizzes(
 
     return quizzes
 
+
+@router.get("/quiz/{quiz_id}/validate", response_model=QuizValidationResponse)
+def validate_quiz(
+    quiz_id: int,
+    teacher_id: str = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    quiz = db.query(Quiz).filter(
+        Quiz.id == quiz_id,
+        Quiz.teacher_id == int(teacher_id)
+    ).first()
+
+    if not quiz:
+        raise HTTPException(
+            status_code=404,
+            detail="Quiz not found"
+        )
+
+    questions = db.query(Question).filter(
+        Question.quiz_id == quiz_id
+    ).all()
+
+    total_questions = len(questions)
+    valid_questions = 0
+
+    for question in questions:
+        options = db.query(QuizOption).filter(
+            QuizOption.question_id == question.id
+        ).all()
+
+        has_options = len(options) > 0
+
+        has_correct_option = any(
+            option.is_correct for option in options
+        )
+
+        if question.question_type == "multiple_choice":
+            is_valid = (
+                has_options
+                and has_correct_option
+            )
+        elif question.question_type == "true_false":
+            is_valid = question.correct_answer.lower() in [
+                "true",
+                "false"
+            ]
+        else:
+            is_valid = bool(
+                question.correct_answer.strip()
+            )
+
+        if is_valid:
+            valid_questions += 1
+
+    invalid_questions = total_questions - valid_questions
+
+    is_valid = (
+        total_questions > 0
+        and invalid_questions == 0
+    )
+
+    return {
+        "quiz_id": quiz.id,
+        "total_questions": total_questions,
+        "valid_questions": valid_questions,
+        "invalid_questions": invalid_questions,
+        "is_valid": is_valid
+    }
+
+
 @router.get("/{quiz_id}", response_model=QuizDetailResponse)
 def get_quiz(
     quiz_id: int,
@@ -85,14 +157,15 @@ def get_quiz(
 
     return quiz
 
-    @router.put("/{quiz_id}", response_model=QuizResponse)
-    def update_quiz(
+
+@router.put("/{quiz_id}", response_model=QuizResponse)
+def update_quiz(
     quiz_id: int,
     quiz: QuizUpdate,
     teacher_id: str = Depends(get_current_teacher),
     db: Session = Depends(get_db)
 ):
-     existing_quiz = db.query(Quiz).filter(
+    existing_quiz = db.query(Quiz).filter(
         Quiz.id == quiz_id,
         Quiz.teacher_id == int(teacher_id)
     ).first()
@@ -112,13 +185,14 @@ def get_quiz(
 
     return existing_quiz
 
-    @router.delete("/{quiz_id}")
-    def delete_quiz(
+
+@router.delete("/{quiz_id}")
+def delete_quiz(
     quiz_id: int,
     teacher_id: str = Depends(get_current_teacher),
     db: Session = Depends(get_db)
 ):
-     quiz = db.query(Quiz).filter(
+    quiz = db.query(Quiz).filter(
         Quiz.id == quiz_id,
         Quiz.teacher_id == int(teacher_id)
     ).first()
@@ -135,6 +209,7 @@ def get_quiz(
     return {
         "message": "Quiz deleted successfully"
     }
+
 
 @router.patch("/{quiz_id}/status", response_model=QuizResponse)
 def update_quiz_status(
@@ -153,6 +228,52 @@ def update_quiz_status(
             status_code=404,
             detail="Quiz not found"
         )
+
+    if quiz_status.status == "published":
+        questions = db.query(Question).filter(
+            Question.quiz_id == quiz_id
+        ).all()
+
+        if not questions:
+            raise HTTPException(
+                status_code=400,
+                detail="Quiz must have at least one question before publishing"
+            )
+
+        for question in questions:
+            options = db.query(QuizOption).filter(
+                QuizOption.question_id == question.id
+            ).all()
+
+            if question.question_type == "multiple_choice":
+                has_options = len(options) > 0
+
+                has_correct_option = any(
+                    option.is_correct for option in options
+                )
+
+                if not has_options or not has_correct_option:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="All multiple-choice questions must have options and a correct answer before publishing"
+                    )
+
+            elif question.question_type == "true_false":
+                if question.correct_answer.lower() not in [
+                    "true",
+                    "false"
+                ]:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="True/false questions must have a valid correct answer before publishing"
+                    )
+
+            elif question.question_type == "short_answer":
+                if not question.correct_answer.strip():
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Short-answer questions must have a correct answer before publishing"
+                    )
 
     quiz.status = quiz_status.status
 
