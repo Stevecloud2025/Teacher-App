@@ -59,3 +59,16 @@ class QuizDetailResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+        class QuizUpdate(BaseModel):
+         title: str
+    description: str | None = None
+    status: str = Field(
+        default="draft",
+        pattern="^(draft|published|archived)$"
+    )
+
+    class QuizStatusUpdate(BaseModel):
+     status: str = Field(
+        pattern="^(draft|published|archived)$"
+    )

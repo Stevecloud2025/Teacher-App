@@ -8,8 +8,10 @@ from app.schemas.quiz import (
     QuizCreate,
     QuizResponse,
     QuizDetailResponse,
-    QuizUpdate
+    QuizUpdate,
+    QuizStatusUpdate
 )
+
 from app.api.dependencies import get_current_teacher
 
 
@@ -133,3 +135,28 @@ def get_quiz(
     return {
         "message": "Quiz deleted successfully"
     }
+
+@router.patch("/{quiz_id}/status", response_model=QuizResponse)
+def update_quiz_status(
+    quiz_id: int,
+    quiz_status: QuizStatusUpdate,
+    teacher_id: str = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    quiz = db.query(Quiz).filter(
+        Quiz.id == quiz_id,
+        Quiz.teacher_id == int(teacher_id)
+    ).first()
+
+    if not quiz:
+        raise HTTPException(
+            status_code=404,
+            detail="Quiz not found"
+        )
+
+    quiz.status = quiz_status.status
+
+    db.commit()
+    db.refresh(quiz)
+
+    return quiz

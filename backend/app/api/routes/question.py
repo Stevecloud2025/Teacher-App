@@ -4,10 +4,12 @@ from sqlalchemy.orm import Session
 from app.database.database import get_db
 from app.models.question import Question
 from app.models.quiz import Quiz
+from app.models.option import QuizOption
 from app.schemas.question import (
     QuestionCreate,
     QuestionResponse,
-    QuestionUpdate
+    QuestionUpdate,
+    QuestionValidationResponse
 )
 from app.api.dependencies import get_current_teacher
 
@@ -49,6 +51,86 @@ def create_question(
     return new_question
 
 
+@router.get("/quiz/{quiz_id}", response_model=list[QuestionResponse])
+def get_quiz_questions(
+    quiz_id: int,
+    teacher_id: str = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    quiz = db.query(Quiz).filter(
+        Quiz.id == quiz_id,
+        Quiz.teacher_id == int(teacher_id)
+    ).first()
+
+    if not quiz:
+        raise HTTPException(
+            status_code=404,
+            detail="Quiz not found"
+        )
+
+    questions = db.query(Question).filter(
+        Question.quiz_id == quiz_id
+    ).all()
+
+    return questions
+
+
+@router.get(
+    "/{question_id}/validate",
+    response_model=QuestionValidationResponse
+)
+def validate_question(
+    question_id: int,
+    teacher_id: str = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    question = db.query(Question).join(
+        Question.quiz
+    ).filter(
+        Question.id == question_id,
+        Quiz.teacher_id == int(teacher_id)
+    ).first()
+
+    if not question:
+        raise HTTPException(
+            status_code=404,
+            detail="Question not found"
+        )
+
+    options = db.query(QuizOption).filter(
+        QuizOption.question_id == question_id
+    ).all()
+
+    has_options = len(options) > 0
+
+    has_correct_option = any(
+        option.is_correct for option in options
+    )
+
+    if question.question_type == "multiple_choice":
+        is_valid = (
+            has_options
+            and has_correct_option
+        )
+    elif question.question_type == "true_false":
+        is_valid = question.correct_answer.lower() in [
+            "true",
+            "false"
+        ]
+    else:
+        is_valid = bool(
+            question.correct_answer.strip()
+        )
+
+    return {
+        "question_id": question.id,
+        "question_type": question.question_type,
+        "has_options": has_options,
+        "has_correct_option": has_correct_option,
+        "is_valid": is_valid
+    }
+
+
 @router.get("/{question_id}", response_model=QuestionResponse)
 def get_question(
     question_id: int,
@@ -70,14 +152,15 @@ def get_question(
 
     return question
 
-    @router.put("/{question_id}", response_model=QuestionResponse)
-    def update_question(
+
+@router.put("/{question_id}", response_model=QuestionResponse)
+def update_question(
     question_id: int,
     question: QuestionUpdate,
     teacher_id: str = Depends(get_current_teacher),
     db: Session = Depends(get_db)
 ):
-     existing_question = db.query(Question).join(
+    existing_question = db.query(Question).join(
         Question.quiz
     ).filter(
         Question.id == question_id,
@@ -98,6 +181,7 @@ def get_question(
     db.refresh(existing_question)
 
     return existing_question
+
 
 @router.delete("/{question_id}")
 def delete_question(
@@ -124,26 +208,3 @@ def delete_question(
     return {
         "message": "Question deleted successfully"
     }
-
-@router.get("/quiz/{quiz_id}", response_model=list[QuestionResponse])
-def get_quiz_questions(
-    quiz_id: int,
-    teacher_id: str = Depends(get_current_teacher),
-    db: Session = Depends(get_db)
-):
-    quiz = db.query(Quiz).filter(
-        Quiz.id == quiz_id,
-        Quiz.teacher_id == int(teacher_id)
-    ).first()
-
-    if not quiz:
-        raise HTTPException(
-            status_code=404,
-            detail="Quiz not found"
-        )
-
-    questions = db.query(Question).filter(
-        Question.quiz_id == quiz_id
-    ).all()
-
-    return questions

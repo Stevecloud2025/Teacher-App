@@ -28,3 +28,10 @@ class QuestionResponse(BaseModel):
         pattern="^(multiple_choice|true_false|short_answer)$"
     )
     correct_answer: str
+
+    class QuestionValidationResponse(BaseModel):
+     question_id: int
+    question_type: str
+    has_options: bool
+    has_correct_option: bool
+    is_valid: bool
