@@ -40,6 +40,7 @@ class QuestionResponseNested(BaseModel):
     question_text: str
     question_type: str
     correct_answer: str
+    position: int
     options: list[QuizOptionResponseNested] = []
 
     class Config:
