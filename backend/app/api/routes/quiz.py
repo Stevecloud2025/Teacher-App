@@ -176,6 +176,52 @@ def update_quiz(
             detail="Quiz not found"
         )
 
+    if quiz.status == "published":
+        questions = db.query(Question).filter(
+            Question.quiz_id == quiz_id
+        ).all()
+
+        if not questions:
+            raise HTTPException(
+                status_code=400,
+                detail="Quiz must have at least one question before publishing"
+            )
+
+        for question in questions:
+            options = db.query(QuizOption).filter(
+                QuizOption.question_id == question.id
+            ).all()
+
+            if question.question_type == "multiple_choice":
+                has_options = len(options) > 0
+
+                has_correct_option = any(
+                    option.is_correct for option in options
+                )
+
+                if not has_options or not has_correct_option:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="All multiple-choice questions must have options and a correct answer before publishing"
+                    )
+
+            elif question.question_type == "true_false":
+                if question.correct_answer.lower() not in [
+                    "true",
+                    "false"
+                ]:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="True/false questions must have a valid correct answer before publishing"
+                    )
+
+            elif question.question_type == "short_answer":
+                if not question.correct_answer.strip():
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Short-answer questions must have a correct answer before publishing"
+                    )
+
     existing_quiz.title = quiz.title
     existing_quiz.description = quiz.description
     existing_quiz.status = quiz.status
