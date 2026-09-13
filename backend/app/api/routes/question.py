@@ -37,21 +37,31 @@ def create_question(
             detail="Quiz not found"
         )
 
-    new_question = Question(
-    question_text=question.question_text,
-    question_type=question.question_type,
-    quiz_id=question.quiz_id,
-    correct_answer=question.correct_answer,
-    position=question.position
-)
+    last_question = db.query(Question).filter(
+        Question.quiz_id == question.quiz_id
+    ).order_by(
+        Question.position.desc()
+    ).first()
 
+    next_position = (
+        last_question.position + 1
+        if last_question
+        else 1
+    )
+
+    new_question = Question(
+        question_text=question.question_text,
+        question_type=question.question_type,
+        quiz_id=question.quiz_id,
+        correct_answer=question.correct_answer,
+        position=next_position
+    )
 
     db.add(new_question)
     db.commit()
     db.refresh(new_question)
 
     return new_question
-
 
 @router.get("/quiz/{quiz_id}", response_model=list[QuestionResponse])
 def get_quiz_questions(
@@ -180,6 +190,7 @@ def update_question(
     existing_question.question_text = question.question_text
     existing_question.question_type = question.question_type
     existing_question.correct_answer = question.correct_answer
+    existing_question.position = question.position
 
     db.commit()
     db.refresh(existing_question)

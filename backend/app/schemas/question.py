@@ -9,7 +9,6 @@ class QuestionCreate(BaseModel):
     )
     quiz_id: int
     correct_answer: str
-    position: int = 1
 
 
 class QuestionResponse(BaseModel):
