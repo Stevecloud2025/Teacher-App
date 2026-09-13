@@ -24,6 +24,12 @@ class Question(Base):
         default="multiple_choice"
     )
 
+    position = Column(
+        Integer,
+        nullable=False,
+        default=1
+    )
+
     quiz_id = Column(
         Integer,
         ForeignKey("quizzes.id"),
@@ -39,8 +45,9 @@ class Question(Base):
         "Quiz",
         back_populates="questions"
     )
+
     options = relationship(
-    "QuizOption",
-    back_populates="question",
-    cascade="all, delete-orphan"
-)
+        "QuizOption",
+        back_populates="question",
+        cascade="all, delete-orphan"
+    )

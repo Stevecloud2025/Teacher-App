@@ -9,6 +9,7 @@ class QuestionCreate(BaseModel):
     )
     quiz_id: int
     correct_answer: str
+    position: int = 1
 
 
 class QuestionResponse(BaseModel):
@@ -17,6 +18,7 @@ class QuestionResponse(BaseModel):
     question_type: str
     quiz_id: int
     correct_answer: str
+    position: int
 
     class Config:
         from_attributes = True
@@ -29,6 +31,7 @@ class QuestionUpdate(BaseModel):
         pattern="^(multiple_choice|true_false|short_answer)$"
     )
     correct_answer: str
+    position: int = 1
 
 
 class QuestionValidationResponse(BaseModel):

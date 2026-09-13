@@ -195,8 +195,9 @@ def duplicate_quiz(
             question_text=question.question_text,
             question_type=question.question_type,
             quiz_id=new_quiz.id,
-            correct_answer=question.correct_answer
-        )
+            correct_answer=question.correct_answer,
+            position=question.position
+)
 
         db.add(new_question)
         db.flush()

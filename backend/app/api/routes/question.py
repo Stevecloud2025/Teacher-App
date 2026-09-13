@@ -38,11 +38,13 @@ def create_question(
         )
 
     new_question = Question(
-        question_text=question.question_text,
-        question_type=question.question_type,
-        quiz_id=question.quiz_id,
-        correct_answer=question.correct_answer
-    )
+    question_text=question.question_text,
+    question_type=question.question_type,
+    quiz_id=question.quiz_id,
+    correct_answer=question.correct_answer,
+    position=question.position
+)
+
 
     db.add(new_question)
     db.commit()
@@ -69,8 +71,10 @@ def get_quiz_questions(
         )
 
     questions = db.query(Question).filter(
-        Question.quiz_id == quiz_id
-    ).all()
+    Question.quiz_id == quiz_id
+).order_by(
+    Question.position.asc()
+).all()
 
     return questions
 
