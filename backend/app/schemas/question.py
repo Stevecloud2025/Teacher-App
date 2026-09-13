@@ -30,7 +30,7 @@ class QuestionUpdate(BaseModel):
         pattern="^(multiple_choice|true_false|short_answer)$"
     )
     correct_answer: str
-    position: int = 1
+    position: int = Field(default=1, ge=1)
 
 
 class QuestionValidationResponse(BaseModel):
