@@ -158,6 +158,67 @@ def get_quiz(
     return quiz
 
 
+@router.post("/{quiz_id}/duplicate", response_model=QuizResponse)
+def duplicate_quiz(
+    quiz_id: int,
+    teacher_id: str = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    existing_quiz = db.query(Quiz).filter(
+        Quiz.id == quiz_id,
+        Quiz.teacher_id == int(teacher_id)
+    ).first()
+
+    if not existing_quiz:
+        raise HTTPException(
+            status_code=404,
+            detail="Quiz not found"
+        )
+
+    new_quiz = Quiz(
+        title=f"{existing_quiz.title} (Copy)",
+        description=existing_quiz.description,
+        lesson_id=existing_quiz.lesson_id,
+        teacher_id=int(teacher_id),
+        status="draft"
+    )
+
+    db.add(new_quiz)
+    db.flush()
+
+    questions = db.query(Question).filter(
+        Question.quiz_id == existing_quiz.id
+    ).all()
+
+    for question in questions:
+        new_question = Question(
+            question_text=question.question_text,
+            question_type=question.question_type,
+            quiz_id=new_quiz.id,
+            correct_answer=question.correct_answer
+        )
+
+        db.add(new_question)
+        db.flush()
+
+        options = db.query(QuizOption).filter(
+            QuizOption.question_id == question.id
+        ).all()
+
+        for option in options:
+            new_option = QuizOption(
+                option_text=option.option_text,
+                is_correct=option.is_correct,
+                question_id=new_question.id
+            )
+
+            db.add(new_option)
+
+    db.commit()
+    db.refresh(new_quiz)
+
+    return new_quiz
+
 @router.put("/{quiz_id}", response_model=QuizResponse)
 def update_quiz(
     quiz_id: int,
