@@ -38,6 +38,18 @@ def create_option(
             detail="Question not found"
         )
 
+    if option.is_correct:
+        existing_correct_option = db.query(QuizOption).filter(
+        QuizOption.question_id == option.question_id,
+        QuizOption.is_correct == True
+    ).first()
+
+    if existing_correct_option:
+        raise HTTPException(
+            status_code=400,
+            detail="This question already has a correct option"
+        )
+
     new_option = QuizOption(
         option_text=option.option_text,
         is_correct=option.is_correct,
@@ -126,6 +138,19 @@ def get_option(
         raise HTTPException(
             status_code=404,
             detail="Option not found"
+        )
+
+    if option.is_correct:
+        existing_correct_option = db.query(QuizOption).filter(
+        QuizOption.question_id == existing_option.question_id,
+        QuizOption.is_correct == True,
+        QuizOption.id != existing_option.id
+    ).first()
+
+    if existing_correct_option:
+        raise HTTPException(
+            status_code=400,
+            detail="This question already has a different correct option"
         )
 
     existing_option.option_text = option.option_text
