@@ -100,26 +100,27 @@ def validate_quiz(
 
         has_options = len(options) > 0
 
-        has_correct_option = any(
-            option.is_correct for option in options
-        )
+    correct_option_count = sum(
+        option.is_correct for option in options
+)
 
-        if question.question_type == "multiple_choice":
-            is_valid = (
-                has_options
-                and has_correct_option
-            )
-        elif question.question_type == "true_false":
+    if question.question_type == "multiple_choice":
+        is_valid = (
+            has_options
+        and correct_option_count == 1
+    )
+
+    elif question.question_type == "true_false":
             is_valid = question.correct_answer.lower() in [
                 "true",
                 "false"
             ]
-        else:
+    else:
             is_valid = bool(
                 question.correct_answer.strip()
             )
 
-        if is_valid:
+    if is_valid:
             valid_questions += 1
 
     invalid_questions = total_questions - valid_questions

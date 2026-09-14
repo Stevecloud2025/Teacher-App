@@ -63,7 +63,11 @@ def create_question(
 
     return new_question
 
-@router.get("/quiz/{quiz_id}", response_model=list[QuestionResponse])
+
+@router.get(
+    "/quiz/{quiz_id}",
+    response_model=list[QuestionResponse]
+)
 def get_quiz_questions(
     quiz_id: int,
     teacher_id: str = Depends(get_current_teacher),
@@ -81,10 +85,10 @@ def get_quiz_questions(
         )
 
     questions = db.query(Question).filter(
-    Question.quiz_id == quiz_id
-).order_by(
-    Question.position.asc()
-).all()
+        Question.quiz_id == quiz_id
+    ).order_by(
+        Question.position.asc()
+    ).all()
 
     return questions
 
@@ -117,14 +121,16 @@ def validate_question(
 
     has_options = len(options) > 0
 
-    has_correct_option = any(
+    correct_option_count = sum(
         option.is_correct for option in options
     )
+
+    has_correct_option = correct_option_count > 0
 
     if question.question_type == "multiple_choice":
         is_valid = (
             has_options
-            and has_correct_option
+            and correct_option_count == 1
         )
     elif question.question_type == "true_false":
         is_valid = question.correct_answer.lower() in [
@@ -145,7 +151,10 @@ def validate_question(
     }
 
 
-@router.get("/{question_id}", response_model=QuestionResponse)
+@router.get(
+    "/{question_id}",
+    response_model=QuestionResponse
+)
 def get_question(
     question_id: int,
     teacher_id: str = Depends(get_current_teacher),
@@ -167,7 +176,10 @@ def get_question(
     return question
 
 
-@router.put("/{question_id}", response_model=QuestionResponse)
+@router.put(
+    "/{question_id}",
+    response_model=QuestionResponse
+)
 def update_question(
     question_id: int,
     question: QuestionUpdate,
@@ -198,7 +210,9 @@ def update_question(
     return existing_question
 
 
-@router.delete("/{question_id}")
+@router.delete(
+    "/{question_id}"
+)
 def delete_question(
     question_id: int,
     teacher_id: str = Depends(get_current_teacher),
