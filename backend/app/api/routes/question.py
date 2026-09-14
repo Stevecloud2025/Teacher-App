@@ -9,7 +9,8 @@ from app.schemas.question import (
     QuestionCreate,
     QuestionResponse,
     QuestionUpdate,
-    QuestionValidationResponse
+    QuestionValidationResponse,
+    QuestionReorder
 )
 from app.api.dependencies import get_current_teacher
 
@@ -237,3 +238,67 @@ def delete_question(
     return {
         "message": "Question deleted successfully"
     }
+
+@router.patch(
+    "/{question_id}/reorder",
+    response_model=QuestionResponse
+)
+def reorder_question(
+    question_id: int,
+    reorder: QuestionReorder,
+    teacher_id: str = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    question = db.query(Question).join(
+        Question.quiz
+    ).filter(
+        Question.id == question_id,
+        Quiz.teacher_id == int(teacher_id)
+    ).first()
+
+    if not question:
+        raise HTTPException(
+            status_code=404,
+            detail="Question not found"
+        )
+
+    quiz_questions = db.query(Question).filter(
+        Question.quiz_id == question.quiz_id
+    ).order_by(
+        Question.position.asc()
+    ).all()
+
+    if reorder.position > len(quiz_questions):
+        raise HTTPException(
+            status_code=400,
+            detail="Position is outside the range of questions in this quiz"
+        )
+
+    old_position = question.position
+    new_position = reorder.position
+
+    if old_position == new_position:
+        return question
+
+    if new_position < old_position:
+        for item in quiz_questions:
+            if (
+                item.id != question.id
+                and new_position <= item.position < old_position
+            ):
+                item.position += 1
+
+    else:
+        for item in quiz_questions:
+            if (
+                item.id != question.id
+                and old_position < item.position <= new_position
+            ):
+                item.position -= 1
+
+    question.position = new_position
+
+    db.commit()
+    db.refresh(question)
+
+    return question

@@ -30,7 +30,10 @@ class QuestionUpdate(BaseModel):
         pattern="^(multiple_choice|true_false|short_answer)$"
     )
     correct_answer: str
-    position: int = Field(default=1, ge=1)
+    position: int = Field(
+        default=1,
+        ge=1
+    )
 
 
 class QuestionValidationResponse(BaseModel):
@@ -39,3 +42,9 @@ class QuestionValidationResponse(BaseModel):
     has_options: bool
     has_correct_option: bool
     is_valid: bool
+
+
+class QuestionReorder(BaseModel):
+    position: int = Field(
+        ge=1
+    )
