@@ -69,7 +69,10 @@ def get_quizzes(
     return quizzes
 
 
-@router.get("/quiz/{quiz_id}/validate", response_model=QuizValidationResponse)
+@router.get(
+    "/quiz/{quiz_id}/validate",
+    response_model=QuizValidationResponse
+)
 def validate_quiz(
     quiz_id: int,
     teacher_id: str = Depends(get_current_teacher),
@@ -100,27 +103,28 @@ def validate_quiz(
 
         has_options = len(options) > 0
 
-    correct_option_count = sum(
-        option.is_correct for option in options
-)
+        correct_option_count = sum(
+            option.is_correct for option in options
+        )
 
-    if question.question_type == "multiple_choice":
-        is_valid = (
-            has_options
-        and correct_option_count == 1
-    )
+        if question.question_type == "multiple_choice":
+            is_valid = (
+                has_options
+                and correct_option_count == 1
+            )
 
-    elif question.question_type == "true_false":
+        elif question.question_type == "true_false":
             is_valid = question.correct_answer.lower() in [
                 "true",
                 "false"
             ]
-    else:
+
+        else:
             is_valid = bool(
                 question.correct_answer.strip()
             )
 
-    if is_valid:
+        if is_valid:
             valid_questions += 1
 
     invalid_questions = total_questions - valid_questions
@@ -139,7 +143,10 @@ def validate_quiz(
     }
 
 
-@router.get("/{quiz_id}", response_model=QuizDetailResponse)
+@router.get(
+    "/{quiz_id}",
+    response_model=QuizDetailResponse
+)
 def get_quiz(
     quiz_id: int,
     teacher_id: str = Depends(get_current_teacher),
@@ -159,7 +166,10 @@ def get_quiz(
     return quiz
 
 
-@router.post("/{quiz_id}/duplicate", response_model=QuizResponse)
+@router.post(
+    "/{quiz_id}/duplicate",
+    response_model=QuizResponse
+)
 def duplicate_quiz(
     quiz_id: int,
     teacher_id: str = Depends(get_current_teacher),
@@ -189,6 +199,8 @@ def duplicate_quiz(
 
     questions = db.query(Question).filter(
         Question.quiz_id == existing_quiz.id
+    ).order_by(
+        Question.position.asc()
     ).all()
 
     for question in questions:
@@ -198,19 +210,22 @@ def duplicate_quiz(
             quiz_id=new_quiz.id,
             correct_answer=question.correct_answer,
             position=question.position
-)
+        )
 
         db.add(new_question)
         db.flush()
 
         options = db.query(QuizOption).filter(
             QuizOption.question_id == question.id
+        ).order_by(
+            QuizOption.position.asc()
         ).all()
 
         for option in options:
             new_option = QuizOption(
                 option_text=option.option_text,
                 is_correct=option.is_correct,
+                position=option.position,
                 question_id=new_question.id
             )
 
@@ -221,7 +236,11 @@ def duplicate_quiz(
 
     return new_quiz
 
-@router.put("/{quiz_id}", response_model=QuizResponse)
+
+@router.put(
+    "/{quiz_id}",
+    response_model=QuizResponse
+)
 def update_quiz(
     quiz_id: int,
     quiz: QuizUpdate,
@@ -258,14 +277,14 @@ def update_quiz(
             if question.question_type == "multiple_choice":
                 has_options = len(options) > 0
 
-                has_correct_option = any(
+                correct_option_count = sum(
                     option.is_correct for option in options
                 )
 
-                if not has_options or not has_correct_option:
+                if not has_options or correct_option_count != 1:
                     raise HTTPException(
                         status_code=400,
-                        detail="All multiple-choice questions must have options and a correct answer before publishing"
+                        detail="All multiple-choice questions must have options and exactly one correct answer before publishing"
                     )
 
             elif question.question_type == "true_false":
@@ -295,7 +314,9 @@ def update_quiz(
     return existing_quiz
 
 
-@router.delete("/{quiz_id}")
+@router.delete(
+    "/{quiz_id}"
+)
 def delete_quiz(
     quiz_id: int,
     teacher_id: str = Depends(get_current_teacher),
@@ -320,7 +341,10 @@ def delete_quiz(
     }
 
 
-@router.patch("/{quiz_id}/status", response_model=QuizResponse)
+@router.patch(
+    "/{quiz_id}/status",
+    response_model=QuizResponse
+)
 def update_quiz_status(
     quiz_id: int,
     quiz_status: QuizStatusUpdate,
@@ -357,14 +381,14 @@ def update_quiz_status(
             if question.question_type == "multiple_choice":
                 has_options = len(options) > 0
 
-                has_correct_option = any(
+                correct_option_count = sum(
                     option.is_correct for option in options
                 )
 
-                if not has_options or not has_correct_option:
+                if not has_options or correct_option_count != 1:
                     raise HTTPException(
                         status_code=400,
-                        detail="All multiple-choice questions must have options and a correct answer before publishing"
+                        detail="All multiple-choice questions must have options and exactly one correct answer before publishing"
                     )
 
             elif question.question_type == "true_false":
