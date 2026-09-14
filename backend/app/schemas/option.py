@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class QuizOptionCreate(BaseModel):
@@ -11,6 +11,7 @@ class QuizOptionResponse(BaseModel):
     id: int
     option_text: str
     is_correct: bool
+    position: int
     question_id: int
 
     class Config:
@@ -20,3 +21,9 @@ class QuizOptionResponse(BaseModel):
 class QuizOptionUpdate(BaseModel):
     option_text: str
     is_correct: bool = False
+
+
+class QuizOptionReorder(BaseModel):
+    position: int = Field(
+        ge=1
+    )

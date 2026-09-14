@@ -24,6 +24,12 @@ class QuizOption(Base):
         default=False
     )
 
+    position = Column(
+        Integer,
+        nullable=False,
+        default=1
+    )
+
     question_id = Column(
         Integer,
         ForeignKey("questions.id"),
