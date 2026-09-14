@@ -49,5 +49,6 @@ class Question(Base):
     options = relationship(
         "QuizOption",
         back_populates="question",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
+        order_by="QuizOption.position"
     )
