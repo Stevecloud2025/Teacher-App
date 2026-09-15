@@ -9,11 +9,13 @@ from app.api.routes.dashboard import router as dashboard_router
 from app.api.routes.quiz import router as quiz_router
 from app.api.routes.question import router as question_router
 from app.api.routes.option import router as option_router
+from app.api.routes.attempt import router as attempt_router
 from app.models.lesson import Lesson
 from app.models.quiz import Quiz
 from app.models.question import Question
 from app.models.option import QuizOption
 from app.models.quiz_attempt import QuizAttempt
+from app.models.quiz_attempt_answer import QuizAttemptAnswer
 
 Base.metadata.create_all(bind=engine)
 
@@ -28,7 +30,7 @@ app.include_router(dashboard_router)
 app.include_router(quiz_router)
 app.include_router(question_router)
 app.include_router(option_router)
-
+app.include_router(attempt_router)
 
 @app.get("/")
 def home():

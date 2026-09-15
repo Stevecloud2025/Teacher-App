@@ -20,6 +20,7 @@ from app.models.quiz import Quiz
 from app.models.question import Question
 from app.models.option import QuizOption
 from app.models.quiz_attempt import QuizAttempt
+from app.models.quiz_attempt_answer import QuizAttemptAnswer
 
 
 # this is the Alembic Config object
