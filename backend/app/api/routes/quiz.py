@@ -91,10 +91,13 @@ def validate_quiz(
 
     questions = db.query(Question).filter(
         Question.quiz_id == quiz_id
+    ).order_by(
+        Question.position.asc()
     ).all()
 
     total_questions = len(questions)
     valid_questions = 0
+    question_results = []
 
     for question in questions:
         options = db.query(QuizOption).filter(
@@ -113,19 +116,50 @@ def validate_quiz(
                 and correct_option_count == 1
             )
 
+            if not has_options:
+                reason = "Question has no options"
+            elif correct_option_count == 0:
+                reason = "Question has no correct option"
+            elif correct_option_count > 1:
+                reason = "Question has more than one correct option"
+            else:
+                reason = "Question is valid"
+
         elif question.question_type == "true_false":
             is_valid = question.correct_answer.lower() in [
                 "true",
                 "false"
             ]
 
+            if is_valid:
+                reason = "Question is valid"
+            else:
+                reason = (
+                    "True/false question must have "
+                    "a valid correct answer"
+                )
+
         else:
             is_valid = bool(
                 question.correct_answer.strip()
             )
 
+            if is_valid:
+                reason = "Question is valid"
+            else:
+                reason = "Question must have a correct answer"
+
         if is_valid:
             valid_questions += 1
+
+        question_results.append(
+            {
+                "question_id": question.id,
+                "question_type": question.question_type,
+                "is_valid": is_valid,
+                "reason": reason
+            }
+        )
 
     invalid_questions = total_questions - valid_questions
 
@@ -139,7 +173,8 @@ def validate_quiz(
         "total_questions": total_questions,
         "valid_questions": valid_questions,
         "invalid_questions": invalid_questions,
-        "is_valid": is_valid
+        "is_valid": is_valid,
+        "questions": question_results
     }
 
 
@@ -266,7 +301,10 @@ def update_quiz(
         if not questions:
             raise HTTPException(
                 status_code=400,
-                detail="Quiz must have at least one question before publishing"
+                detail=(
+                    "Quiz must have at least one question "
+                    "before publishing"
+                )
             )
 
         for question in questions:
@@ -284,7 +322,11 @@ def update_quiz(
                 if not has_options or correct_option_count != 1:
                     raise HTTPException(
                         status_code=400,
-                        detail="All multiple-choice questions must have options and exactly one correct answer before publishing"
+                        detail=(
+                            "All multiple-choice questions must "
+                            "have options and exactly one correct "
+                            "answer before publishing"
+                        )
                     )
 
             elif question.question_type == "true_false":
@@ -294,14 +336,20 @@ def update_quiz(
                 ]:
                     raise HTTPException(
                         status_code=400,
-                        detail="True/false questions must have a valid correct answer before publishing"
+                        detail=(
+                            "True/false questions must have "
+                            "a valid correct answer before publishing"
+                        )
                     )
 
             elif question.question_type == "short_answer":
                 if not question.correct_answer.strip():
                     raise HTTPException(
                         status_code=400,
-                        detail="Short-answer questions must have a correct answer before publishing"
+                        detail=(
+                            "Short-answer questions must have "
+                            "a correct answer before publishing"
+                        )
                     )
 
     existing_quiz.title = quiz.title
@@ -370,7 +418,10 @@ def update_quiz_status(
         if not questions:
             raise HTTPException(
                 status_code=400,
-                detail="Quiz must have at least one question before publishing"
+                detail=(
+                    "Quiz must have at least one question "
+                    "before publishing"
+                )
             )
 
         for question in questions:
@@ -388,7 +439,11 @@ def update_quiz_status(
                 if not has_options or correct_option_count != 1:
                     raise HTTPException(
                         status_code=400,
-                        detail="All multiple-choice questions must have options and exactly one correct answer before publishing"
+                        detail=(
+                            "All multiple-choice questions must "
+                            "have options and exactly one correct "
+                            "answer before publishing"
+                        )
                     )
 
             elif question.question_type == "true_false":
@@ -398,14 +453,20 @@ def update_quiz_status(
                 ]:
                     raise HTTPException(
                         status_code=400,
-                        detail="True/false questions must have a valid correct answer before publishing"
+                        detail=(
+                            "True/false questions must have "
+                            "a valid correct answer before publishing"
+                        )
                     )
 
             elif question.question_type == "short_answer":
                 if not question.correct_answer.strip():
                     raise HTTPException(
                         status_code=400,
-                        detail="Short-answer questions must have a correct answer before publishing"
+                        detail=(
+                            "Short-answer questions must have "
+                            "a correct answer before publishing"
+                        )
                     )
 
     quiz.status = quiz_status.status

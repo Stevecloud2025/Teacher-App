@@ -82,9 +82,19 @@ class QuizStatusUpdate(BaseModel):
     )
 
 
+class QuizQuestionValidationResult(BaseModel):
+    question_id: int
+    question_type: str
+    is_valid: bool
+    reason: str
+
+
 class QuizValidationResponse(BaseModel):
     quiz_id: int
     total_questions: int
     valid_questions: int
     invalid_questions: int
     is_valid: bool
+    questions: list[QuizQuestionValidationResult] = Field(
+        default_factory=list
+    )

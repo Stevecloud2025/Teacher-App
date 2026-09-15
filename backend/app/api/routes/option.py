@@ -14,11 +14,28 @@ from app.schemas.option import (
 from app.api.dependencies import get_current_teacher
 
 
+
 router = APIRouter(
     prefix="/options",
     tags=["Quiz Options"]
 )
 
+def normalize_option_positions(
+    db: Session,
+    question_id: int
+):
+    options = db.query(QuizOption).filter(
+        QuizOption.question_id == question_id
+    ).order_by(
+        QuizOption.position.asc(),
+        QuizOption.id.asc()
+    ).all()
+
+    for index, option in enumerate(
+        options,
+        start=1
+    ):
+        option.position = index
 
 @router.post("/", response_model=QuizOptionResponse)
 def create_option(
@@ -71,6 +88,12 @@ def create_option(
     )
 
     db.add(new_option)
+
+    normalize_option_positions(
+    db,
+    option.question_id
+)
+
     db.commit()
     db.refresh(new_option)
 
@@ -184,11 +207,15 @@ def update_option(
     existing_option.option_text = option.option_text
     existing_option.is_correct = option.is_correct
 
+    normalize_option_positions(
+    db,
+    existing_option.question_id
+)
+
     db.commit()
     db.refresh(existing_option)
 
     return existing_option
-
 
 @router.delete(
     "/{option_id}"
@@ -217,12 +244,21 @@ def delete_option(
             detail="Option not found"
         )
 
+    question_id = option.question_id
+
     db.delete(option)
+    db.flush()
+
+    normalize_option_positions(
+    db,
+    question_id
+)
+
     db.commit()
 
     return {
-        "message": "Option deleted successfully"
-    }
+    "message": "Option deleted successfully"
+}
 
 @router.patch(
     "/{option_id}/reorder",
@@ -288,6 +324,11 @@ def reorder_option(
                 item.position -= 1
 
     option.position = new_position
+
+    normalize_option_positions(
+    db,
+    option.question_id
+)
 
     db.commit()
     db.refresh(option)

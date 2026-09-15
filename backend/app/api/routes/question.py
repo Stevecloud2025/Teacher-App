@@ -21,6 +21,24 @@ router = APIRouter(
 )
 
 
+def normalize_question_positions(
+    db: Session,
+    quiz_id: int
+):
+    questions = db.query(Question).filter(
+        Question.quiz_id == quiz_id
+    ).order_by(
+        Question.position.asc(),
+        Question.id.asc()
+    ).all()
+
+    for index, question in enumerate(
+        questions,
+        start=1
+    ):
+        question.position = index
+
+
 @router.post("/", response_model=QuestionResponse)
 def create_question(
     question: QuestionCreate,
@@ -59,6 +77,12 @@ def create_question(
     )
 
     db.add(new_question)
+
+    normalize_question_positions(
+        db,
+        question.quiz_id
+    )
+
     db.commit()
     db.refresh(new_question)
 
@@ -133,11 +157,13 @@ def validate_question(
             has_options
             and correct_option_count == 1
         )
+
     elif question.question_type == "true_false":
         is_valid = question.correct_answer.lower() in [
             "true",
             "false"
         ]
+
     else:
         is_valid = bool(
             question.correct_answer.strip()
@@ -205,6 +231,11 @@ def update_question(
     existing_question.correct_answer = question.correct_answer
     existing_question.position = question.position
 
+    normalize_question_positions(
+        db,
+        existing_question.quiz_id
+    )
+
     db.commit()
     db.refresh(existing_question)
 
@@ -232,12 +263,22 @@ def delete_question(
             detail="Question not found"
         )
 
+    quiz_id = question.quiz_id
+
     db.delete(question)
+    db.flush()
+
+    normalize_question_positions(
+        db,
+        quiz_id
+    )
+
     db.commit()
 
     return {
         "message": "Question deleted successfully"
     }
+
 
 @router.patch(
     "/{question_id}/reorder",
@@ -297,6 +338,11 @@ def reorder_question(
                 item.position -= 1
 
     question.position = new_position
+
+    normalize_question_positions(
+        db,
+        question.quiz_id
+    )
 
     db.commit()
     db.refresh(question)
