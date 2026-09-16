@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -156,3 +158,81 @@ def submit_quiz_answer(
     db.refresh(new_answer)
 
     return new_answer
+
+
+@router.get(
+    "/{attempt_id}/answers",
+    response_model=list[QuizAttemptAnswerResponse]
+)
+def get_attempt_answers(
+    attempt_id: int,
+    db: Session = Depends(get_db)
+):
+    attempt = db.query(QuizAttempt).filter(
+        QuizAttempt.id == attempt_id
+    ).first()
+
+    if not attempt:
+        raise HTTPException(
+            status_code=404,
+            detail="Quiz attempt not found"
+        )
+
+    answers = db.query(QuizAttemptAnswer).filter(
+        QuizAttemptAnswer.attempt_id == attempt_id
+    ).order_by(
+        QuizAttemptAnswer.question_id.asc()
+    ).all()
+
+    return answers
+
+
+@router.post(
+    "/{attempt_id}/submit",
+    response_model=QuizAttemptResponse
+)
+def submit_quiz_attempt(
+    attempt_id: int,
+    db: Session = Depends(get_db)
+):
+    attempt = db.query(QuizAttempt).filter(
+        QuizAttempt.id == attempt_id
+    ).first()
+
+    if not attempt:
+        raise HTTPException(
+            status_code=404,
+            detail="Quiz attempt not found"
+        )
+
+    if attempt.submitted:
+        raise HTTPException(
+            status_code=400,
+            detail="Quiz attempt has already been submitted"
+        )
+
+    questions = db.query(Question).filter(
+        Question.quiz_id == attempt.quiz_id
+    ).all()
+
+    answers = db.query(QuizAttemptAnswer).filter(
+        QuizAttemptAnswer.attempt_id == attempt_id
+    ).all()
+
+    total_questions = len(questions)
+
+    score = sum(
+        1
+        for answer in answers
+        if answer.is_correct
+    )
+
+    attempt.score = score
+    attempt.total_questions = total_questions
+    attempt.submitted = True
+    attempt.submitted_at = datetime.now(timezone.utc)
+
+    db.commit()
+    db.refresh(attempt)
+
+    return attempt

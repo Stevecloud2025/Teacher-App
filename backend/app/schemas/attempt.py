@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 class QuizAttemptCreate(BaseModel):
     quiz_id: int
+    student_id: int
 
 
 class QuizAttemptResponse(BaseModel):
