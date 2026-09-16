@@ -20,3 +20,17 @@ class QuizAttemptResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class QuizAttemptResultResponse(BaseModel):
+    attempt_id: int
+    student_id: int
+    quiz_id: int
+    score: int
+    total_questions: int
+    percentage: float
+    submitted: bool
+    submitted_at: datetime
+
+    class Config:
+        from_attributes = True

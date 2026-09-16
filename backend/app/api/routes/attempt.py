@@ -1,5 +1,3 @@
-from datetime import datetime, timezone
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -9,10 +7,13 @@ from app.models.quiz_attempt import QuizAttempt
 from app.models.quiz_attempt_answer import QuizAttemptAnswer
 from app.models.question import Question
 from app.models.option import QuizOption
+
 from app.schemas.attempt import (
     QuizAttemptCreate,
-    QuizAttemptResponse
+    QuizAttemptResponse,
+    QuizAttemptResultResponse
 )
+
 from app.schemas.attempt_answer import (
     QuizAttemptAnswerCreate,
     QuizAttemptAnswerResponse
@@ -159,7 +160,6 @@ def submit_quiz_answer(
 
     return new_answer
 
-
 @router.get(
     "/{attempt_id}/answers",
     response_model=list[QuizAttemptAnswerResponse]
@@ -186,16 +186,15 @@ def get_attempt_answers(
 
     return answers
 
-
-@router.post(
+    @router.post(
     "/{attempt_id}/submit",
     response_model=QuizAttemptResponse
 )
-def submit_quiz_attempt(
+    def submit_quiz_attempt(
     attempt_id: int,
     db: Session = Depends(get_db)
 ):
-    attempt = db.query(QuizAttempt).filter(
+     attempt = db.query(QuizAttempt).filter(
         QuizAttempt.id == attempt_id
     ).first()
 
@@ -220,7 +219,6 @@ def submit_quiz_attempt(
     ).all()
 
     total_questions = len(questions)
-
     score = sum(
         1
         for answer in answers
@@ -230,9 +228,56 @@ def submit_quiz_attempt(
     attempt.score = score
     attempt.total_questions = total_questions
     attempt.submitted = True
+
+    from datetime import datetime, timezone
+
     attempt.submitted_at = datetime.now(timezone.utc)
 
     db.commit()
     db.refresh(attempt)
 
     return attempt
+
+@router.get(
+    "/{attempt_id}/result",
+    response_model=QuizAttemptResultResponse
+)
+def get_quiz_attempt_result(
+    attempt_id: int,
+    db: Session = Depends(get_db)
+):
+    attempt = db.query(QuizAttempt).filter(
+        QuizAttempt.id == attempt_id
+    ).first()
+
+    if not attempt:
+        raise HTTPException(
+            status_code=404,
+            detail="Quiz attempt not found"
+        )
+
+    if not attempt.submitted:
+        raise HTTPException(
+            status_code=400,
+            detail="Quiz attempt has not been submitted"
+        )
+
+    score = attempt.score or 0
+    total_questions = attempt.total_questions or 0
+
+    percentage = (
+        (score / total_questions) * 100
+        if total_questions > 0
+        else 0
+    )
+
+    return {
+        "attempt_id": attempt.id,
+        "student_id": attempt.student_id,
+        "quiz_id": attempt.quiz_id,
+        "score": score,
+        "total_questions": total_questions,
+        "percentage": round(percentage, 2),
+        "submitted": attempt.submitted,
+        "submitted_at": attempt.submitted_at
+    }
