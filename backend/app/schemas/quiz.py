@@ -1,4 +1,5 @@
 from datetime import datetime
+
 from pydantic import BaseModel, Field
 
 
@@ -7,9 +8,9 @@ class QuizCreate(BaseModel):
     description: str | None = None
     lesson_id: int
     time_limit: int | None = Field(
-    default=None,
-    gt=0
-)
+        default=None,
+        gt=0
+    )
     status: str = Field(
         default="draft",
         pattern="^(draft|published|archived)$"
@@ -77,9 +78,9 @@ class QuizUpdate(BaseModel):
     title: str
     description: str | None = None
     time_limit: int | None = Field(
-    default=None,
-    gt=0
-)
+        default=None,
+        gt=0
+    )
     status: str = Field(
         default="draft",
         pattern="^(draft|published|archived)$"
@@ -108,3 +109,38 @@ class QuizValidationResponse(BaseModel):
     questions: list[QuizQuestionValidationResult] = Field(
         default_factory=list
     )
+
+
+class StudentQuizOptionResponse(BaseModel):
+    id: int
+    option_text: str
+    position: int
+
+    class Config:
+        from_attributes = True
+
+
+class StudentQuizQuestionResponse(BaseModel):
+    id: int
+    question_text: str
+    question_type: str
+    position: int
+    options: list[StudentQuizOptionResponse] = Field(
+        default_factory=list
+    )
+
+    class Config:
+        from_attributes = True
+
+
+class StudentQuizResponse(BaseModel):
+    id: int
+    title: str
+    description: str | None
+    time_limit: int | None
+    questions: list[StudentQuizQuestionResponse] = Field(
+        default_factory=list
+    )
+
+    class Config:
+        from_attributes = True

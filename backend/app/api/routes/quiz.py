@@ -11,8 +11,9 @@ from app.schemas.quiz import (
     QuizResponse,
     QuizDetailResponse,
     QuizUpdate,
+    StudentQuizResponse,
+    QuizValidationResponse,
     QuizStatusUpdate,
-    QuizValidationResponse
 )
 from app.api.dependencies import get_current_teacher
 
@@ -47,7 +48,7 @@ def create_quiz(
         teacher_id=int(teacher_id),
         status=quiz.status,
         time_limit=quiz.time_limit
-)
+    )
 
     db.add(new_quiz)
     db.commit()
@@ -180,6 +181,28 @@ def validate_quiz(
 
 
 @router.get(
+    "/student/{quiz_id}",
+    response_model=StudentQuizResponse
+)
+def get_student_quiz(
+    quiz_id: int,
+    db: Session = Depends(get_db)
+):
+    quiz = db.query(Quiz).filter(
+        Quiz.id == quiz_id,
+        Quiz.status == "published"
+    ).first()
+
+    if not quiz:
+        raise HTTPException(
+            status_code=404,
+            detail="Published quiz not found"
+        )
+
+    return quiz
+
+
+@router.get(
     "/{quiz_id}",
     response_model=QuizDetailResponse
 )
@@ -227,7 +250,8 @@ def duplicate_quiz(
         description=existing_quiz.description,
         lesson_id=existing_quiz.lesson_id,
         teacher_id=int(teacher_id),
-        status="draft"
+        status="draft",
+        time_limit=existing_quiz.time_limit
     )
 
     db.add(new_quiz)
