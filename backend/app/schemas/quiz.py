@@ -6,7 +6,10 @@ class QuizCreate(BaseModel):
     title: str
     description: str | None = None
     lesson_id: int
-    time_limit: int | None = None
+    time_limit: int | None = Field(
+    default=None,
+    gt=0
+)
     status: str = Field(
         default="draft",
         pattern="^(draft|published|archived)$"
@@ -73,7 +76,10 @@ class QuizDetailResponse(BaseModel):
 class QuizUpdate(BaseModel):
     title: str
     description: str | None = None
-    time_limit: int | None = None
+    time_limit: int | None = Field(
+    default=None,
+    gt=0
+)
     status: str = Field(
         default="draft",
         pattern="^(draft|published|archived)$"
