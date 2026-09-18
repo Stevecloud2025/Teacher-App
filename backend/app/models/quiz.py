@@ -42,6 +42,11 @@ class Quiz(Base):
         default="draft"
     )
 
+    time_limit = Column(
+    Integer,
+    nullable=True
+)
+
     created_at = Column(
         DateTime(timezone=True),
         server_default=func.now()
