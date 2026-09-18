@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -34,6 +36,17 @@ def start_quiz_attempt(
     attempt: QuizAttemptCreate,
     db: Session = Depends(get_db)
 ):
+    existing_attempt = db.query(QuizAttempt).filter(
+        QuizAttempt.student_id == attempt.student_id,
+        QuizAttempt.quiz_id == attempt.quiz_id
+    ).first()
+
+    if existing_attempt:
+        raise HTTPException(
+            status_code=400,
+            detail="This student has already attempted this quiz"
+        )
+
     quiz = db.query(Quiz).filter(
         Quiz.id == attempt.quiz_id,
         Quiz.status == "published"
@@ -160,6 +173,7 @@ def submit_quiz_answer(
 
     return new_answer
 
+
 @router.get(
     "/{attempt_id}/answers",
     response_model=list[QuizAttemptAnswerResponse]
@@ -186,15 +200,16 @@ def get_attempt_answers(
 
     return answers
 
-    @router.post(
+
+@router.post(
     "/{attempt_id}/submit",
     response_model=QuizAttemptResponse
 )
-    def submit_quiz_attempt(
+def submit_quiz_attempt(
     attempt_id: int,
     db: Session = Depends(get_db)
 ):
-     attempt = db.query(QuizAttempt).filter(
+    attempt = db.query(QuizAttempt).filter(
         QuizAttempt.id == attempt_id
     ).first()
 
@@ -219,6 +234,7 @@ def get_attempt_answers(
     ).all()
 
     total_questions = len(questions)
+
     score = sum(
         1
         for answer in answers
@@ -228,15 +244,13 @@ def get_attempt_answers(
     attempt.score = score
     attempt.total_questions = total_questions
     attempt.submitted = True
-
-    from datetime import datetime, timezone
-
     attempt.submitted_at = datetime.now(timezone.utc)
 
     db.commit()
     db.refresh(attempt)
 
     return attempt
+
 
 @router.get(
     "/{attempt_id}/result",
