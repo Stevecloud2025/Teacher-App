@@ -45,8 +45,9 @@ def create_quiz(
         description=quiz.description,
         lesson_id=quiz.lesson_id,
         teacher_id=int(teacher_id),
-        status=quiz.status
-    )
+        status=quiz.status,
+        time_limit=quiz.time_limit
+)
 
     db.add(new_quiz)
     db.commit()
@@ -355,6 +356,7 @@ def update_quiz(
     existing_quiz.title = quiz.title
     existing_quiz.description = quiz.description
     existing_quiz.status = quiz.status
+    existing_quiz.time_limit = quiz.time_limit
 
     db.commit()
     db.refresh(existing_quiz)
