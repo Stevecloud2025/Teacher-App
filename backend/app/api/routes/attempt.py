@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -20,6 +20,7 @@ from app.schemas.attempt_answer import (
     QuizAttemptAnswerCreate,
     QuizAttemptAnswerResponse
 )
+
 
 
 router = APIRouter(
@@ -227,11 +228,60 @@ def submit_quiz_attempt(
             status_code=404,
             detail="Quiz attempt not found"
         )
+        quiz = db.query(Quiz).filter(
+        Quiz.id == attempt.quiz_id
+    ).first()
+    quiz = db.query(Quiz).filter(
+        Quiz.id == attempt.quiz_id
+    ).first()
+    
+    if not quiz:
+        raise HTTPException(
+            status_code=404,
+            detail="Quiz not found"
+        )
+
+    if quiz.time_limit is not None:
+        current_time = datetime.now(timezone.utc)
+
+        time_limit_end = (
+            attempt.started_at
+            + timedelta(minutes=quiz.time_limit)
+        )
+
+        if current_time > time_limit_end:
+            raise HTTPException(
+                status_code=400,
+                detail="The time limit for this quiz has expired"
+            )
 
     if attempt.submitted:
         raise HTTPException(
             status_code=400,
             detail="Quiz attempt has already been submitted"
+        )
+    quiz = db.query(Quiz).filter(
+    Quiz.id == attempt.quiz_id
+    ).first()
+
+    if not quiz:
+        raise HTTPException(
+        status_code=404,
+        detail="Quiz not found"
+    )
+
+    if quiz.time_limit is not None:
+        current_time = datetime.now(timezone.utc)
+
+        time_limit_end = (
+        attempt.started_at
+        + timedelta(minutes=quiz.time_limit)
+    )
+
+    if current_time > time_limit_end:
+        raise HTTPException(
+            status_code=400,
+            detail="The time limit for this quiz has expired"
         )
 
     questions = db.query(Question).filter(
