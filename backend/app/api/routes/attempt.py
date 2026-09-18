@@ -116,6 +116,7 @@ def submit_quiz_answer(
     is_correct = False
 
     if question.question_type == "multiple_choice":
+
         if answer.selected_option_id is None:
             raise HTTPException(
                 status_code=400,
@@ -136,6 +137,7 @@ def submit_quiz_answer(
         is_correct = selected_option.is_correct
 
     elif question.question_type == "true_false":
+
         if not answer.answer_text:
             raise HTTPException(
                 status_code=400,
@@ -148,6 +150,7 @@ def submit_quiz_answer(
         )
 
     elif question.question_type == "short_answer":
+
         if not answer.answer_text:
             raise HTTPException(
                 status_code=400,
@@ -157,6 +160,12 @@ def submit_quiz_answer(
         is_correct = (
             answer.answer_text.strip().lower()
             == question.correct_answer.strip().lower()
+        )
+
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="Unsupported question type"
         )
 
     new_answer = QuizAttemptAnswer(
@@ -234,6 +243,17 @@ def submit_quiz_attempt(
     ).all()
 
     total_questions = len(questions)
+
+    if len(answers) < total_questions:
+        unanswered_questions = total_questions - len(answers)
+
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"You must answer all questions before submitting. "
+                f"{unanswered_questions} question(s) unanswered."
+            )
+        )
 
     score = sum(
         1
