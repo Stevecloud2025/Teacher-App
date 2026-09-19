@@ -22,7 +22,10 @@ from app.schemas.question import (
 from app.schemas.option import (
     QuizOptionCreate,
     QuizOptionResponse,
+    QuizOptionUpdate,
+    QuizOptionReorder,
 )
+
 from app.api.dependencies import get_current_teacher
 
 
@@ -158,6 +161,165 @@ def create_option(
 
     return new_option
 
+
+@router.get(
+    "/questions/{question_id}/options",
+    response_model=list[QuizOptionResponse]
+)
+def get_question_options(
+    question_id: int,
+    teacher_id: str = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    question = db.query(Question).join(
+        Quiz,
+        Question.quiz_id == Quiz.id
+    ).filter(
+        Question.id == question_id,
+        Quiz.teacher_id == int(teacher_id)
+    ).first()
+
+    if not question:
+        raise HTTPException(
+            status_code=404,
+            detail="Question not found"
+        )
+
+    options = db.query(QuizOption).filter(
+        QuizOption.question_id == question_id
+    ).order_by(
+        QuizOption.position.asc()
+    ).all()
+
+    return options
+
+
+@router.put(
+    "/questions/{question_id}/options/{option_id}",
+    response_model=QuizOptionResponse
+)
+def update_option(
+    question_id: int,
+    option_id: int,
+    option: QuizOptionUpdate,
+    teacher_id: str = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    question = db.query(Question).join(
+        Quiz,
+        Question.quiz_id == Quiz.id
+    ).filter(
+        Question.id == question_id,
+        Quiz.teacher_id == int(teacher_id)
+    ).first()
+
+    if not question:
+        raise HTTPException(
+            status_code=404,
+            detail="Question not found"
+        )
+
+    existing_option = db.query(QuizOption).filter(
+        QuizOption.id == option_id,
+        QuizOption.question_id == question_id
+    ).first()
+
+    if not existing_option:
+        raise HTTPException(
+            status_code=404,
+            detail="Option not found"
+        )
+
+    existing_option.option_text = option.option_text
+    existing_option.is_correct = option.is_correct
+
+    db.commit()
+    db.refresh(existing_option)
+
+    return existing_option
+
+@router.delete(
+    "/questions/{question_id}/options/{option_id}"
+)
+def delete_option(
+    question_id: int,
+    option_id: int,
+    teacher_id: str = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    question = db.query(Question).join(
+        Quiz,
+        Question.quiz_id == Quiz.id
+    ).filter(
+        Question.id == question_id,
+        Quiz.teacher_id == int(teacher_id)
+    ).first()
+
+    if not question:
+        raise HTTPException(
+            status_code=404,
+            detail="Question not found"
+        )
+
+    existing_option = db.query(QuizOption).filter(
+        QuizOption.id == option_id,
+        QuizOption.question_id == question_id
+    ).first()
+
+    if not existing_option:
+        raise HTTPException(
+            status_code=404,
+            detail="Option not found"
+        )
+
+    db.delete(existing_option)
+    db.commit()
+
+    return {
+        "message": "Option deleted successfully"
+    }
+
+@router.patch(
+    "/questions/{question_id}/options/{option_id}/reorder"
+)
+def reorder_option(
+    question_id: int,
+    option_id: int,
+    reorder_data: QuizOptionReorder,
+    teacher_id: str = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    question = db.query(Question).join(
+        Quiz,
+        Question.quiz_id == Quiz.id
+    ).filter(
+        Question.id == question_id,
+        Quiz.teacher_id == int(teacher_id)
+    ).first()
+
+    if not question:
+        raise HTTPException(
+            status_code=404,
+            detail="Question not found"
+        )
+
+    existing_option = db.query(QuizOption).filter(
+        QuizOption.id == option_id,
+        QuizOption.question_id == question_id
+    ).first()
+
+    if not existing_option:
+        raise HTTPException(
+            status_code=404,
+            detail="Option not found"
+        )
+
+    existing_option.position = reorder_data.position
+
+    db.commit()
+    db.refresh(existing_option)
+
+    return existing_option
 
 @router.get("/", response_model=list[QuizResponse])
 def get_quizzes(
