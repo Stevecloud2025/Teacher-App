@@ -15,6 +15,14 @@ from app.schemas.quiz import (
     QuizValidationResponse,
     QuizStatusUpdate,
 )
+from app.schemas.question import (
+    QuestionCreate,
+    QuestionResponse,
+)
+from app.schemas.option import (
+    QuizOptionCreate,
+    QuizOptionResponse,
+)
 from app.api.dependencies import get_current_teacher
 
 
@@ -55,6 +63,100 @@ def create_quiz(
     db.refresh(new_quiz)
 
     return new_quiz
+
+
+@router.post(
+    "/{quiz_id}/questions",
+    response_model=QuestionResponse
+)
+def create_question(
+    quiz_id: int,
+    question: QuestionCreate,
+    teacher_id: str = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    quiz = db.query(Quiz).filter(
+        Quiz.id == quiz_id,
+        Quiz.teacher_id == int(teacher_id)
+    ).first()
+
+    if not quiz:
+        raise HTTPException(
+            status_code=404,
+            detail="Quiz not found"
+        )
+
+    if question.quiz_id != quiz_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Question quiz_id does not match the URL quiz_id"
+        )
+
+    last_position = db.query(Question).filter(
+        Question.quiz_id == quiz_id
+    ).count()
+
+    new_question = Question(
+        question_text=question.question_text,
+        question_type=question.question_type,
+        quiz_id=quiz_id,
+        correct_answer=question.correct_answer,
+        position=last_position + 1
+    )
+
+    db.add(new_question)
+    db.commit()
+    db.refresh(new_question)
+
+    return new_question
+
+
+@router.post(
+    "/questions/{question_id}/options",
+    response_model=QuizOptionResponse
+)
+def create_option(
+    question_id: int,
+    option: QuizOptionCreate,
+    teacher_id: str = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    question = db.query(Question).join(
+        Quiz,
+        Question.quiz_id == Quiz.id
+    ).filter(
+        Question.id == question_id,
+        Quiz.teacher_id == int(teacher_id)
+    ).first()
+
+    if not question:
+        raise HTTPException(
+            status_code=404,
+            detail="Question not found"
+        )
+
+    if option.question_id != question_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Option question_id does not match the URL question_id"
+        )
+
+    existing_options = db.query(QuizOption).filter(
+        QuizOption.question_id == question_id
+    ).count()
+
+    new_option = QuizOption(
+        option_text=option.option_text,
+        is_correct=option.is_correct,
+        position=existing_options + 1,
+        question_id=question_id
+    )
+
+    db.add(new_option)
+    db.commit()
+    db.refresh(new_option)
+
+    return new_option
 
 
 @router.get("/", response_model=list[QuizResponse])
