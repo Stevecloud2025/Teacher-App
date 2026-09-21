@@ -21,3 +21,18 @@ def get_current_teacher(
         )
 
     return teacher_id
+
+def get_current_student(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    token = credentials.credentials
+
+    student_id = verify_access_token(token)
+
+    if student_id is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired token"
+        )
+
+    return student_id

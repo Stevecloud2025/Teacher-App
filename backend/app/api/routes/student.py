@@ -3,9 +3,17 @@ from sqlalchemy.orm import Session
 
 from app.database.database import get_db
 from app.models.student import Student
-from app.schemas.student import StudentCreate, StudentResponse
-from app.core.security import hash_password
-
+from app.schemas.student import (
+    StudentCreate,
+    StudentResponse,
+    StudentLogin
+)
+from app.core.security import (
+    hash_password,
+    verify_password,
+    create_access_token
+)
+from app.api.dependencies import get_current_student
 
 router = APIRouter(
     prefix="/students",
@@ -46,3 +54,59 @@ def register_student(
     db.refresh(new_student)
 
     return new_student
+
+@router.post("/login")
+def login_student(
+    student: StudentLogin,
+    db: Session = Depends(get_db)
+):
+    db_student = db.query(Student).filter(
+        Student.email == student.email
+    ).first()
+
+    if not db_student:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password"
+        )
+
+    if not verify_password(
+        student.password,
+        db_student.password
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password"
+        )
+
+    access_token = create_access_token(
+        {
+            "sub": str(db_student.id),
+            "role": "student"
+        }
+    )
+
+    return {
+        "message": "Login successful",
+        "student_id": db_student.id,
+        "full_name": db_student.full_name,
+        "email": db_student.email,
+        "access_token": access_token
+    }
+
+@router.get("/me", response_model=StudentResponse)
+def get_my_student_profile(
+    student_id: str = Depends(get_current_student),
+    db: Session = Depends(get_db)
+):
+    student = db.query(Student).filter(
+        Student.id == int(student_id)
+    ).first()
+
+    if not student:
+        raise HTTPException(
+            status_code=404,
+            detail="Student not found"
+        )
+
+    return student
