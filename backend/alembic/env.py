@@ -21,7 +21,7 @@ from app.models.question import Question
 from app.models.option import QuizOption
 from app.models.quiz_attempt import QuizAttempt
 from app.models.quiz_attempt_answer import QuizAttemptAnswer
-
+from app.models.student import Student
 
 # this is the Alembic Config object
 config = context.config
