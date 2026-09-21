@@ -18,6 +18,8 @@ from app.schemas.quiz import (
 from app.schemas.question import (
     QuestionCreate,
     QuestionResponse,
+    QuestionUpdate,
+    QuestionReorder,
 )
 from app.schemas.option import (
     QuizOptionCreate,
@@ -161,6 +163,58 @@ def create_option(
 
     return new_option
 
+@router.get(
+    "/questions/{question_id}",
+    response_model=QuestionResponse
+)
+def get_question(
+    question_id: int,
+    teacher_id: str = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    existing_question = db.query(Question).join(
+        Quiz,
+        Question.quiz_id == Quiz.id
+    ).filter(
+        Question.id == question_id,
+        Quiz.teacher_id == int(teacher_id)
+    ).first()
+
+    if not existing_question:
+        raise HTTPException(
+            status_code=404,
+            detail="Question not found"
+        )
+
+    return existing_question
+
+@router.get(
+    "/{quiz_id}/questions",
+    response_model=list[QuestionResponse]
+)
+def get_quiz_questions(
+    quiz_id: int,
+    teacher_id: str = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    quiz = db.query(Quiz).filter(
+        Quiz.id == quiz_id,
+        Quiz.teacher_id == int(teacher_id)
+    ).first()
+
+    if not quiz:
+        raise HTTPException(
+            status_code=404,
+            detail="Quiz not found"
+        )
+
+    questions = db.query(Question).filter(
+        Question.quiz_id == quiz_id
+    ).order_by(
+        Question.position.asc()
+    ).all()
+
+    return questions
 
 @router.get(
     "/questions/{question_id}/options",
@@ -320,6 +374,98 @@ def reorder_option(
     db.refresh(existing_option)
 
     return existing_option
+
+@router.put(
+    "/questions/{question_id}"
+)
+def update_question(
+    question_id: int,
+    question: QuestionUpdate,
+    teacher_id: str = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    existing_question = db.query(Question).join(
+        Quiz,
+        Question.quiz_id == Quiz.id
+    ).filter(
+        Question.id == question_id,
+        Quiz.teacher_id == int(teacher_id)
+    ).first()
+
+    if not existing_question:
+        raise HTTPException(
+            status_code=404,
+            detail="Question not found"
+        )
+
+    existing_question.question_text = question.question_text
+    existing_question.question_type = question.question_type
+    existing_question.correct_answer = question.correct_answer
+    existing_question.position = question.position
+
+    db.commit()
+    db.refresh(existing_question)
+
+    return existing_question
+
+@router.delete(
+    "/questions/{question_id}"
+)
+def delete_question(
+    question_id: int,
+    teacher_id: str = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    existing_question = db.query(Question).join(
+        Quiz,
+        Question.quiz_id == Quiz.id
+    ).filter(
+        Question.id == question_id,
+        Quiz.teacher_id == int(teacher_id)
+    ).first()
+
+    if not existing_question:
+        raise HTTPException(
+            status_code=404,
+            detail="Question not found"
+        )
+
+    db.delete(existing_question)
+    db.commit()
+
+    return {
+        "message": "Question deleted successfully"
+    }
+
+@router.patch(
+    "/questions/{question_id}/reorder"
+)
+def reorder_question(
+    question_id: int,
+    reorder_data: QuestionReorder,
+    teacher_id: str = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    existing_question = db.query(Question).join(
+        Quiz,
+        Question.quiz_id == Quiz.id
+    ).filter(
+        Question.id == question_id,
+        Quiz.teacher_id == int(teacher_id)
+    ).first()
+
+    if not existing_question:
+        raise HTTPException(
+            status_code=404,
+            detail="Question not found"
+        )
+
+    existing_question.position = reorder_data.position
+
+    db.commit()
+    db.refresh(existing_question)
+
+    return existing_question
 
 @router.get("/", response_model=list[QuizResponse])
 def get_quizzes(
