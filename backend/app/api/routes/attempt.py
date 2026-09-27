@@ -80,13 +80,14 @@ def start_quiz_attempt(
 def submit_quiz_answer(
     attempt_id: int,
     answer: QuizAttemptAnswerCreate,
+    student_id: str = Depends(get_current_student),
     db: Session = Depends(get_db)
 ):
     attempt = db.query(QuizAttempt).filter(
-        QuizAttempt.id == attempt_id,
-        QuizAttempt.submitted == False
-    ).first()
-
+    QuizAttempt.id == attempt_id,
+    QuizAttempt.student_id == int(student_id),
+    QuizAttempt.submitted == False
+).first()
     if not attempt:
         raise HTTPException(
             status_code=404,
@@ -215,12 +216,14 @@ def submit_quiz_answer(
 )
 def get_attempt_answers(
     attempt_id: int,
+    student_id: str = Depends(get_current_student),
     db: Session = Depends(get_db)
 ):
     attempt = db.query(QuizAttempt).filter(
-        QuizAttempt.id == attempt_id
-    ).first()
-
+    QuizAttempt.id == attempt_id,
+    QuizAttempt.student_id == int(student_id)
+).first()
+    
     if not attempt:
         raise HTTPException(
             status_code=404,
@@ -242,11 +245,13 @@ def get_attempt_answers(
 )
 def submit_quiz_attempt(
     attempt_id: int,
+    student_id: str = Depends(get_current_student),
     db: Session = Depends(get_db)
 ):
     attempt = db.query(QuizAttempt).filter(
-        QuizAttempt.id == attempt_id
-    ).first()
+    QuizAttempt.id == attempt_id,
+    QuizAttempt.student_id == int(student_id)
+).first()
 
     if not attempt:
         raise HTTPException(
@@ -328,11 +333,14 @@ def submit_quiz_attempt(
 )
 def get_quiz_attempt_result(
     attempt_id: int,
+    student_id: str = Depends(get_current_student),
     db: Session = Depends(get_db)
 ):
+
     attempt = db.query(QuizAttempt).filter(
-        QuizAttempt.id == attempt_id
-    ).first()
+    QuizAttempt.id == attempt_id,
+    QuizAttempt.student_id == int(student_id)
+).first()
 
     if not attempt:
         raise HTTPException(
