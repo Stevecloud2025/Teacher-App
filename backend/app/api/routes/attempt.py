@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database.database import get_db
+from app.api.dependencies import get_current_student
 from app.models.quiz import Quiz
 from app.models.quiz_attempt import QuizAttempt
 from app.models.quiz_attempt_answer import QuizAttemptAnswer
@@ -34,12 +35,13 @@ router = APIRouter(
 )
 def start_quiz_attempt(
     attempt: QuizAttemptCreate,
+    student_id: str = Depends(get_current_student),
     db: Session = Depends(get_db)
 ):
     existing_attempt = db.query(QuizAttempt).filter(
-        QuizAttempt.student_id == attempt.student_id,
-        QuizAttempt.quiz_id == attempt.quiz_id
-    ).first()
+    QuizAttempt.student_id == int(student_id),
+    QuizAttempt.quiz_id == attempt.quiz_id
+).first()
 
     if existing_attempt:
         raise HTTPException(

@@ -48,12 +48,12 @@ def verify_access_token(token: str):
             algorithms=[ALGORITHM]
         )
 
-        teacher_id = payload.get("sub")
+        user_id = payload.get("sub")
 
-        if teacher_id is None:
+        if user_id is None:
             return None
 
-        return teacher_id
+        return payload
 
     except Exception:
         return None

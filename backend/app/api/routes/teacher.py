@@ -113,8 +113,11 @@ def login_teacher(
 
     # Create JWT access token
     access_token = create_access_token(
-        {"sub": str(db_teacher.id)}
-    )
+    {
+        "sub": str(db_teacher.id),
+        "role": "teacher"
+    }
+)
 
     return {
         "message": "Login successful",
