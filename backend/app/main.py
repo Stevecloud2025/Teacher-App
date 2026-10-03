@@ -17,9 +17,11 @@ from app.models.option import QuizOption
 from app.models.quiz_attempt import QuizAttempt
 from app.api.routes.student import router as student_router
 from app.api.routes.attendance import router as attendance_router
+from app.api.routes.homework import router as homework_router
 from app.models.quiz_attempt_answer import QuizAttemptAnswer
 from app.models.student import Student
 from app.models.attendance import Attendance
+from app.models.homework import Homework
 
 
 Base.metadata.create_all(bind=engine)
