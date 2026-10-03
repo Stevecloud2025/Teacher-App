@@ -16,6 +16,7 @@ from app.models.question import Question
 from app.models.option import QuizOption
 from app.models.quiz_attempt import QuizAttempt
 from app.api.routes.student import router as student_router
+from app.api.routes.attendance import router as attendance_router
 from app.models.quiz_attempt_answer import QuizAttemptAnswer
 from app.models.student import Student
 from app.models.attendance import Attendance
@@ -36,6 +37,7 @@ app.include_router(question_router)
 app.include_router(option_router)
 app.include_router(attempt_router)
 app.include_router(student_router)
+app.include_router(attendance_router)
 
 @app.get("/")
 def home():
