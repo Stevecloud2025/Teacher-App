@@ -40,6 +40,7 @@ app.include_router(option_router)
 app.include_router(attempt_router)
 app.include_router(student_router)
 app.include_router(attendance_router)
+app.include_router(homework_router)
 
 @app.get("/")
 def home():
