@@ -18,6 +18,7 @@ from app.models.quiz_attempt import QuizAttempt
 from app.api.routes.student import router as student_router
 from app.models.quiz_attempt_answer import QuizAttemptAnswer
 from app.models.student import Student
+from app.models.attendance import Attendance
 
 
 Base.metadata.create_all(bind=engine)
