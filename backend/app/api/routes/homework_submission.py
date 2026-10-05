@@ -6,9 +6,13 @@ from app.models.homework import Homework
 from app.models.homework_submission import HomeworkSubmission
 from app.schemas.homework_submission import (
     HomeworkSubmissionCreate,
+    HomeworkSubmissionGrade,
     HomeworkSubmissionResponse
 )
-from app.api.dependencies import get_current_student
+from app.api.dependencies import (
+    get_current_student,
+    get_current_teacher
+)
 
 
 router = APIRouter(
@@ -81,3 +85,63 @@ def get_my_submissions(
     ).order_by(
         HomeworkSubmission.submitted_at.desc()
     ).all()
+
+
+@router.get(
+    "/teacher",
+    response_model=list[HomeworkSubmissionResponse]
+)
+def get_homework_submissions_for_teacher(
+    teacher_id: str = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    teacher_id = int(teacher_id)
+
+    return db.query(
+        HomeworkSubmission
+    ).join(
+        Homework,
+        Homework.id == HomeworkSubmission.homework_id
+    ).filter(
+        Homework.teacher_id == teacher_id
+    ).order_by(
+        HomeworkSubmission.submitted_at.desc()
+    ).all()
+
+
+@router.put(
+    "/{submission_id}/grade",
+    response_model=HomeworkSubmissionResponse
+)
+def grade_homework_submission(
+    submission_id: int,
+    grading: HomeworkSubmissionGrade,
+    teacher_id: str = Depends(get_current_teacher),
+    db: Session = Depends(get_db)
+):
+    teacher_id = int(teacher_id)
+
+    submission = db.query(
+        HomeworkSubmission
+    ).join(
+        Homework,
+        Homework.id == HomeworkSubmission.homework_id
+    ).filter(
+        HomeworkSubmission.id == submission_id,
+        Homework.teacher_id == teacher_id
+    ).first()
+
+    if not submission:
+        raise HTTPException(
+            status_code=404,
+            detail="Homework submission not found"
+        )
+
+    submission.grade = grading.grade
+    submission.feedback = grading.feedback
+    submission.status = "graded"
+
+    db.commit()
+    db.refresh(submission)
+
+    return submission

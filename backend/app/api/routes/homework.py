@@ -4,7 +4,10 @@ from sqlalchemy.orm import Session
 from app.database.database import get_db
 from app.models.homework import Homework
 from app.schemas.homework import HomeworkCreate, HomeworkResponse
-from app.api.dependencies import get_current_teacher
+from app.api.dependencies import (
+    get_current_teacher,
+    get_current_student
+)
 
 
 router = APIRouter(
@@ -47,6 +50,18 @@ def get_homework(
     return db.query(Homework).filter(
         Homework.teacher_id == teacher_id
     ).order_by(
+        Homework.due_date.asc()
+    ).all()
+
+@router.get(
+    "/student",
+    response_model=list[HomeworkResponse]
+)
+def get_student_homework(
+    student_id: str = Depends(get_current_student),
+    db: Session = Depends(get_db)
+):
+    return db.query(Homework).order_by(
         Homework.due_date.asc()
     ).all()
 
@@ -130,3 +145,5 @@ def delete_homework(
     return {
         "message": "Homework deleted successfully"
     }
+
+

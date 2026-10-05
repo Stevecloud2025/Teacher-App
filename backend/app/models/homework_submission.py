@@ -41,3 +41,13 @@ class HomeworkSubmission(Base):
         default="submitted",
         nullable=False
     )
+
+    grade = Column(
+    Integer,
+    nullable=True
+)
+
+feedback = Column(
+    Text,
+    nullable=True
+)
