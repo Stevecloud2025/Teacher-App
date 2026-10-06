@@ -9,7 +9,10 @@ from app.schemas.progress_report import (
     ProgressReportUpdate,
     ProgressReportResponse
 )
-from app.api.dependencies import get_current_teacher
+from app.api.dependencies import (
+    get_current_teacher,
+    get_current_student
+)
 
 
 router = APIRouter(
@@ -17,6 +20,23 @@ router = APIRouter(
     tags=["Progress Reports"]
 )
 
+@router.get(
+    "/my",
+    response_model=list[ProgressReportResponse]
+)
+def get_my_progress_reports(
+    student_id: str = Depends(get_current_student),
+    db: Session = Depends(get_db)
+):
+    student_id = int(student_id)
+
+    return db.query(
+        ProgressReport
+    ).filter(
+        ProgressReport.student_id == student_id
+    ).order_by(
+        ProgressReport.created_at.desc()
+    ).all()
 
 @router.post(
     "/",
