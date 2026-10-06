@@ -43,11 +43,11 @@ class HomeworkSubmission(Base):
     )
 
     grade = Column(
-    Integer,
-    nullable=True
-)
+        Integer,
+        nullable=True
+    )
 
-feedback = Column(
-    Text,
-    nullable=True
-)
+    feedback = Column(
+        Text,
+        nullable=True
+    )

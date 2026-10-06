@@ -25,6 +25,7 @@ from app.models.student import Student
 from app.models.attendance import Attendance
 from app.models.homework import Homework
 from app.models.homework_submission import HomeworkSubmission
+from app.models.progress_report import ProgressReport
 
 # this is the Alembic Config object
 config = context.config

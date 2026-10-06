@@ -19,11 +19,13 @@ from app.api.routes.student import router as student_router
 from app.api.routes.attendance import router as attendance_router
 from app.api.routes.homework import router as homework_router
 from app.api.routes.homework_submission import router as homework_submission_router
+from app.api.routes.progress_report import router as progress_report_router
 from app.models.quiz_attempt_answer import QuizAttemptAnswer
 from app.models.student import Student
 from app.models.attendance import Attendance
 from app.models.homework import Homework
 from app.models.homework_submission import HomeworkSubmission
+from app.models.progress_report import ProgressReport
 
 
 Base.metadata.create_all(bind=engine)
@@ -44,6 +46,7 @@ app.include_router(student_router)
 app.include_router(attendance_router)
 app.include_router(homework_router)
 app.include_router(homework_submission_router)
+app.include_router(progress_report_router)
 
 @app.get("/")
 def home():
