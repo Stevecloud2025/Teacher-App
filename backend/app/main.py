@@ -16,6 +16,7 @@ from app.models.question import Question
 from app.models.option import QuizOption
 from app.models.quiz_attempt import QuizAttempt
 from app.api.routes.student import router as student_router
+from app.api.routes.student_dashboard import router as student_dashboard_router
 from app.api.routes.attendance import router as attendance_router
 from app.api.routes.homework import router as homework_router
 from app.api.routes.homework_submission import router as homework_submission_router
@@ -43,6 +44,7 @@ app.include_router(question_router)
 app.include_router(option_router)
 app.include_router(attempt_router)
 app.include_router(student_router)
+app.include_router(student_dashboard_router)
 app.include_router(attendance_router)
 app.include_router(homework_router)
 app.include_router(homework_submission_router)
