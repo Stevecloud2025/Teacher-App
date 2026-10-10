@@ -25,6 +25,127 @@ router = APIRouter(
     tags=["Progress Reports"]
 )
 
+
+def calculate_performance_summary(
+    student_id: int,
+    db: Session,
+    teacher_id: int | None = None
+):
+    quiz_attempts = db.query(
+        QuizAttempt
+    ).filter(
+        QuizAttempt.student_id == student_id,
+        QuizAttempt.submitted == True,
+        QuizAttempt.score.isnot(None),
+        QuizAttempt.total_questions.isnot(None),
+        QuizAttempt.total_questions > 0
+    ).all()
+
+    quiz_percentages = [
+        (attempt.score / attempt.total_questions) * 100
+        for attempt in quiz_attempts
+    ]
+
+    quiz_average = (
+        sum(quiz_percentages) / len(quiz_percentages)
+        if quiz_percentages
+        else 0
+    )
+
+    homework_submissions = db.query(
+        HomeworkSubmission
+    ).filter(
+        HomeworkSubmission.student_id == student_id,
+        HomeworkSubmission.grade.isnot(None)
+    ).all()
+
+    homework_grades = [
+        submission.grade
+        for submission in homework_submissions
+    ]
+
+    homework_average = (
+        sum(homework_grades) / len(homework_grades)
+        if homework_grades
+        else 0
+    )
+
+    attendance_query = db.query(
+        Attendance
+    ).filter(
+        Attendance.student_id == student_id
+    )
+
+    if teacher_id is not None:
+        attendance_query = attendance_query.filter(
+            Attendance.teacher_id == teacher_id
+        )
+
+    attendance_records = attendance_query.all()
+
+    attendance_total = len(attendance_records)
+
+    present_count = sum(
+        1 for record in attendance_records
+        if record.status.lower() == "present"
+    )
+
+    late_count = sum(
+        1 for record in attendance_records
+        if record.status.lower() == "late"
+    )
+
+    absent_count = sum(
+        1 for record in attendance_records
+        if record.status.lower() == "absent"
+    )
+
+    attendance_percentage = (
+        (present_count / attendance_total) * 100
+        if attendance_total
+        else 0
+    )
+
+    return PerformanceSummaryResponse(
+        student_id=student_id,
+        quiz_average=round(quiz_average, 2),
+        quiz_count=len(quiz_attempts),
+        homework_average=round(homework_average, 2),
+        graded_homework_count=len(homework_submissions),
+        attendance_percentage=round(attendance_percentage, 2),
+        attendance_total=attendance_total,
+        present_count=present_count,
+        late_count=late_count,
+        absent_count=absent_count
+    )
+
+
+@router.get(
+    "/my/summary",
+    response_model=PerformanceSummaryResponse
+)
+def get_my_performance_summary(
+    student_id: str = Depends(get_current_student),
+    db: Session = Depends(get_db)
+):
+    student_id = int(student_id)
+
+    student = db.query(Student).filter(
+        Student.id == student_id
+    ).first()
+
+    if not student:
+        raise HTTPException(
+            status_code=404,
+            detail="Student not found"
+        )
+
+    return calculate_performance_summary(
+        student_id=student_id,
+        db=db
+    )
+
+
 @router.get(
     "/my",
     response_model=list[ProgressReportResponse]
@@ -42,6 +163,7 @@ def get_my_progress_reports(
     ).order_by(
         ProgressReport.created_at.desc()
     ).all()
+
 
 @router.post(
     "/",
@@ -84,7 +206,7 @@ def create_progress_report(
     "/",
     response_model=list[ProgressReportResponse]
 )
-def get_my_progress_reports(
+def get_all_progress_reports(
     teacher_id: str = Depends(get_current_teacher),
     db: Session = Depends(get_db)
 ):
@@ -141,87 +263,12 @@ def get_student_performance_summary(
             detail="Student not found"
         )
 
-    quiz_attempts = db.query(
-        QuizAttempt
-    ).filter(
-        QuizAttempt.student_id == student_id,
-        QuizAttempt.submitted == True,
-        QuizAttempt.score.isnot(None),
-        QuizAttempt.total_questions.isnot(None),
-        QuizAttempt.total_questions > 0
-    ).all()
-
-    quiz_percentages = [
-        (attempt.score / attempt.total_questions) * 100
-        for attempt in quiz_attempts
-    ]
-
-    quiz_average = (
-        sum(quiz_percentages) / len(quiz_percentages)
-        if quiz_percentages
-        else 0
-    )
-
-    homework_submissions = db.query(
-        HomeworkSubmission
-    ).filter(
-        HomeworkSubmission.student_id == student_id,
-        HomeworkSubmission.grade.isnot(None)
-    ).all()
-
-    homework_grades = [
-        submission.grade
-        for submission in homework_submissions
-    ]
-
-    homework_average = (
-        sum(homework_grades) / len(homework_grades)
-        if homework_grades
-        else 0
-    )
-
-    attendance_records = db.query(
-        Attendance
-    ).filter(
-        Attendance.student_id == student_id,
-        Attendance.teacher_id == teacher_id
-    ).all()
-
-    attendance_total = len(attendance_records)
-
-    present_count = sum(
-        1 for record in attendance_records
-        if record.status.lower() == "present"
-    )
-
-    late_count = sum(
-        1 for record in attendance_records
-        if record.status.lower() == "late"
-    )
-
-    absent_count = sum(
-        1 for record in attendance_records
-        if record.status.lower() == "absent"
-    )
-
-    attendance_percentage = (
-        (present_count / attendance_total) * 100
-        if attendance_total
-        else 0
-    )
-
-    return PerformanceSummaryResponse(
+    return calculate_performance_summary(
         student_id=student_id,
-        quiz_average=round(quiz_average, 2),
-        quiz_count=len(quiz_attempts),
-        homework_average=round(homework_average, 2),
-        graded_homework_count=len(homework_submissions),
-        attendance_percentage=round(attendance_percentage, 2),
-        attendance_total=attendance_total,
-        present_count=present_count,
-        late_count=late_count,
-        absent_count=absent_count
+        db=db,
+        teacher_id=teacher_id
     )
+
 
 @router.get(
     "/{report_id}",
