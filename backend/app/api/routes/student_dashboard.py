@@ -1,14 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from datetime import date
 
 from app.database.database import get_db
 from app.models.student import Student
-from app.models.quiz_attempt import QuizAttempt
-from app.models.homework_submission import HomeworkSubmission
-from app.models.attendance import Attendance
 from app.models.progress_report import ProgressReport
+from app.models.homework import Homework
+from app.models.homework_submission import HomeworkSubmission
 from app.api.dependencies import get_current_student
-
+from app.api.routes.progress_report import calculate_performance_summary
 
 router = APIRouter(
     prefix="/student-dashboard",
@@ -34,48 +34,70 @@ def get_student_dashboard(
             detail="Student not found"
         )
 
-    # Count submitted quiz attempts
-    quiz_count = db.query(QuizAttempt).filter(
-        QuizAttempt.student_id == student_id,
-        QuizAttempt.submitted == True
-    ).count()
+           # Calculate the student's academic performance
+    performance_summary = calculate_performance_summary(
+        student_id=student_id,
+        db=db
+    )
 
-    # Count graded homework submissions
-    graded_homework_count = db.query(
-        HomeworkSubmission
+    # Get homework assigned to the student's class
+    assigned_homework = db.query(
+        Homework
     ).filter(
-        HomeworkSubmission.student_id == student_id,
-        HomeworkSubmission.grade.isnot(None)
-    ).count()
-
-    # Count attendance records
-    attendance_records = db.query(Attendance).filter(
-        Attendance.student_id == student_id
+        Homework.class_name == student.class_name
     ).all()
 
-    attendance_total = len(attendance_records)
+    total_homework = len(assigned_homework)
 
-    present_count = sum(
-        1 for record in attendance_records
-        if record.status.lower() == "present"
+    # Get homework submissions made by the student
+    submitted_homework_ids = db.query(
+        HomeworkSubmission.homework_id
+    ).filter(
+        HomeworkSubmission.student_id == student_id
+    ).distinct().all()
+
+    submitted_homework_ids = {
+        item[0] for item in submitted_homework_ids
+    }
+
+    # Count submitted assignments that belong to the student's class
+    submitted_homework = sum(
+        1 for homework in assigned_homework
+        if homework.id in submitted_homework_ids
     )
 
-    late_count = sum(
-        1 for record in attendance_records
-        if record.status.lower() == "late"
-    )
+    # Calculate pending homework
+    pending_homework = total_homework - submitted_homework
 
-    absent_count = sum(
-        1 for record in attendance_records
-        if record.status.lower() == "absent"
-    )
+        # Get today's date
+    today = date.today()
 
-    attendance_percentage = (
-        (present_count / attendance_total) * 100
-        if attendance_total
-        else 0
-    )
+    # Identify upcoming homework that has not been submitted
+    upcoming_homework = [
+        {
+            "id": homework.id,
+            "title": homework.title,
+            "subject": homework.subject,
+            "due_date": homework.due_date
+        }
+        for homework in assigned_homework
+        if homework.id not in submitted_homework_ids
+        and homework.due_date >= today
+    ]
 
+    # Identify overdue homework that has not been submitted
+    overdue_homework = [
+        {
+            "id": homework.id,
+            "title": homework.title,
+            "subject": homework.subject,
+            "due_date": homework.due_date
+        }
+        for homework in assigned_homework
+        if homework.id not in submitted_homework_ids
+        and homework.due_date < today
+    ]
+    
     # Get recent progress reports
     recent_progress_reports = db.query(
         ProgressReport
@@ -94,14 +116,23 @@ def get_student_dashboard(
             "class_name": student.class_name,
             "created_at": student.created_at
         },
-        "quiz_count": quiz_count,
-        "graded_homework_count": graded_homework_count,
+        "quiz_count": performance_summary.quiz_count,
+        "quiz_average": performance_summary.quiz_average,
+        "graded_homework_count": performance_summary.graded_homework_count,
+        "homework_average": performance_summary.homework_average,
+        "homework_overview": {
+            "total": total_homework,
+            "submitted": submitted_homework,
+            "pending": pending_homework
+        },
+        "upcoming_homework": upcoming_homework,
+        "overdue_homework": overdue_homework,
         "attendance": {
-            "total": attendance_total,
-            "present": present_count,
-            "late": late_count,
-            "absent": absent_count,
-            "percentage": round(attendance_percentage, 2)
+            "total": performance_summary.attendance_total,
+            "present": performance_summary.present_count,
+            "late": performance_summary.late_count,
+            "absent": performance_summary.absent_count,
+            "percentage": performance_summary.attendance_percentage
         },
         "recent_progress_reports": recent_progress_reports
     }
