@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import * as SecureStore from 'expo-secure-store';
 import { loginUser } from './src/api';
+import TeacherDashboard from './src/screens/TeacherDashboard';
+import StudentDashboard from './src/screens/StudentDashboard';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -23,6 +25,11 @@ const [email, setEmail] = useState('');
 const [password, setPassword] = useState('');
 const [showPassword, setShowPassword] = useState(false);
 const [isLoading, setIsLoading] = useState(false);
+const [signedInUser, setSignedInUser] = useState<{
+  role: UserRole;
+  full_name: string;
+  userId: number | undefined;
+} | null>(null);
 
   const handleLogin = async () => {
   if (!email.trim() || !password) {
@@ -62,10 +69,14 @@ const [isLoading, setIsLoading] = useState(false);
       }),
     );
 
-    Alert.alert(
-      'Login successful',
-      `Welcome, ${result.full_name}!`,
-    );
+    setSignedInUser({
+  role,
+  full_name: result.full_name,
+  userId,
+});
+
+setPassword('');
+
   } catch (error) {
     const message =
       error instanceof Error
@@ -78,6 +89,42 @@ const [isLoading, setIsLoading] = useState(false);
   }
 };
 
+const handleLogout = async () => {
+  try {
+    await SecureStore.deleteItemAsync('teacher_app_access_token');
+    await SecureStore.deleteItemAsync('teacher_app_user');
+  } catch (error) {
+    Alert.alert(
+      'Logout notice',
+      'Your session could not be fully cleared. Please try again.',
+    );
+    return;
+  }
+
+  setSignedInUser(null);
+  setEmail('');
+  setPassword('');
+  setShowPassword(false);
+  setRole('teacher');
+};
+
+if (signedInUser?.role === 'teacher') {
+  return (
+    <TeacherDashboard
+      fullName={signedInUser.full_name}
+      onLogout={handleLogout}
+    />
+  );
+}
+
+if (signedInUser?.role === 'student') {
+  return (
+    <StudentDashboard
+      fullName={signedInUser.full_name}
+      onLogout={handleLogout}
+    />
+  );
+}
   return (
     <View style={styles.screen}>
       <StatusBar style="light" />

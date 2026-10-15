@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://192.168.0.157:8000';
+const API_BASE_URL = 'http://172.25.154.187:8000';
 
 export type UserRole = 'teacher' | 'student';
 
