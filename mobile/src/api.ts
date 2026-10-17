@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://172.25.154.187:8000';
+const API_BASE_URL = 'http://10.67.190.187:8000';
 
 export type UserRole = 'teacher' | 'student';
 
@@ -51,4 +51,63 @@ export async function loginUser(
   }
 
   return data as LoginResponse;
+}
+
+export interface TeacherDashboardResponse {
+  teacher_id: number;
+  teacher_name: string;
+  teacher_email: string;
+
+  total_lessons: number;
+  published_lessons: number;
+  draft_lessons: number;
+  archived_lessons: number;
+
+  total_subjects: number;
+  total_classes: number;
+  total_topics: number;
+
+  recent_lessons_count: number;
+  last_updated_lesson: string | null;
+  recent_lessons: LessonSummary[];
+}
+
+export interface LessonSummary {
+  id: number;
+  title: string;
+  subject: string;
+  class_name: string;
+  topic: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getTeacherDashboard(
+  accessToken: string,
+): Promise<TeacherDashboardResponse> {
+  const response = await fetch(`${API_BASE_URL}/dashboard/`, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const detail =
+      data?.detail ||
+      data?.message ||
+      `Unable to load dashboard. Status: ${response.status}.`;
+
+    throw new Error(
+      typeof detail === 'string'
+        ? detail
+        : 'Unable to load teacher dashboard.',
+    );
+  }
+
+  return data as TeacherDashboardResponse;
 }

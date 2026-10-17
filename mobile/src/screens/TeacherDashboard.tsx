@@ -1,4 +1,10 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import * as SecureStore from 'expo-secure-store';
+import {
+  getTeacherDashboard,
+  type TeacherDashboardResponse,
+} from '../api';
+
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Alert,
@@ -29,6 +35,55 @@ fullName,
 onLogout,
 }: TeacherDashboardProps) {
 const firstName = fullName.trim().split(/\s+/)[0] || 'Teacher';
+
+  const [dashboard, setDashboard] =
+    useState<TeacherDashboardResponse | null>(null);
+
+  const [loading, setLoading] = useState(true);
+  const [dashboardError, setDashboardError] = useState<string | null>(null);
+
+    useEffect(() => {
+    let isActive = true;
+
+    async function loadDashboard() {
+      try {
+        setLoading(true);
+        setDashboardError(null);
+
+        const accessToken = await SecureStore.getItemAsync(
+          'teacher_app_access_token',
+        );
+
+        if (!accessToken) {
+          throw new Error('Your session has expired. Please log in again.');
+        }
+
+        const result = await getTeacherDashboard(accessToken);
+
+        if (isActive) {
+          setDashboard(result);
+        }
+      } catch (error) {
+        if (isActive) {
+          setDashboardError(
+            error instanceof Error
+              ? error.message
+              : 'Unable to load dashboard data.',
+          );
+        }
+      } finally {
+        if (isActive) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadDashboard();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
 return (
   <SafeAreaView style={styles.safeArea}>
@@ -73,23 +128,64 @@ return (
         </Text>
 
         <View style={styles.statsGrid}>
-          {[
-            { icon: '📚', number: '0', label: 'My Lessons' },
-            { icon: '👨‍🎓', number: '0', label: 'My Students' },
-            { icon: '📝', number: '0', label: 'Pending Quizzes' },
-            { icon: '📋', number: '0', label: 'Homework Tasks' },
-          ].map((item) => (
-            <View key={item.label} style={styles.statCard}>
-              <View style={styles.statIcon}>
-                <Text>{item.icon}</Text>
-              </View>
+  {[
+    {
+      icon: '📚',
+      number: dashboard ? String(dashboard.total_lessons) : '—',
+      label: 'My Lessons',
+    },
+    {
+      icon: '📖',
+      number: dashboard ? String(dashboard.published_lessons) : '—',
+      label: 'Published Lessons',
+    },
+    {
+      icon: '📝',
+      number: dashboard ? String(dashboard.draft_lessons) : '—',
+      label: 'Draft Lessons',
+    },
+    {
+      icon: '🎓',
+      number: dashboard ? String(dashboard.total_subjects) : '—',
+      label: 'My Subjects',
+    },
+  ].map((item) => (
+    <View key={item.label} style={styles.statCard}>
+      <View style={styles.statIcon}>
+        <Text>{item.icon}</Text>
+      </View>
 
-              <Text style={styles.statNumber}>{item.number}</Text>
-              <Text style={styles.statLabel}>{item.label}</Text>
-              <Text style={styles.sampleLabel}>Sample data</Text>
-            </View>
-          ))}
-        </View>
+      <Text style={styles.statNumber}>{item.number}</Text>
+      <Text style={styles.statLabel}>{item.label}</Text>
+
+      <Text style={styles.sampleLabel}>
+        {loading
+          ? 'Loading...'
+          : dashboardError
+            ? 'Unavailable'
+            : 'Live data'}
+      </Text>
+    </View>
+  ))}
+</View>
+
+        {loading && (
+  <Text style={styles.sectionSubtitle}>
+    Loading your latest dashboard data...
+  </Text>
+)}
+
+{dashboardError && (
+  <View style={styles.emptyCard}>
+    <Text style={styles.emptyTitle}>
+      Unable to load dashboard
+    </Text>
+
+    <Text style={styles.emptyMessage}>
+      {dashboardError}
+    </Text>
+  </View>
+)}
 
         <View style={styles.recentSection}>
           <View style={styles.sectionHeadingRow}>
@@ -127,20 +223,63 @@ return (
           </View>
         </View>
 
-        <View style={styles.recentSection}>
-          <Text style={styles.sectionTitle}>Recent Activity</Text>
+        ```tsx
+<View style={styles.recentSection}>
+  <View style={styles.sectionHeadingRow}>
+    <Text style={styles.sectionTitle}>Recent Lessons</Text>
+    <Text style={styles.actionCount}>
+      {dashboard ? `${dashboard.recent_lessons_count} LESSONS` : '—'}
+    </Text>
+  </View>
 
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyIcon}>📭</Text>
+  {loading ? (
+    <View style={styles.emptyCard}>
+      <Text style={styles.emptyMessage}>
+        Loading your recent lessons...
+      </Text>
+    </View>
+  ) : dashboardError ? (
+    <View style={styles.emptyCard}>
+      <Text style={styles.emptyIcon}>⚠️</Text>
+      <Text style={styles.emptyTitle}>Lessons unavailable</Text>
+      <Text style={styles.emptyMessage}>
+        Your recent lessons could not be loaded.
+      </Text>
+    </View>
+  ) : dashboard && dashboard.recent_lessons.length > 0 ? (
+    dashboard.recent_lessons.map((lesson) => (
+      <View key={lesson.id} style={styles.lessonCard}>
+        <View style={styles.lessonCardTop}>
+          <Text style={styles.lessonTitle}>{lesson.title}</Text>
 
-            <Text style={styles.emptyTitle}>No recent activity yet</Text>
-
-            <Text style={styles.emptyMessage}>
-              Your recent teaching activities will appear here when this
-              feature is connected.
+          <View style={styles.lessonStatusBadge}>
+            <Text style={styles.lessonStatusText}>
+              {lesson.status}
             </Text>
           </View>
         </View>
+
+        <Text style={styles.lessonDetails}>
+          {lesson.subject} • {lesson.class_name}
+        </Text>
+
+        <Text style={styles.lessonTopic}>
+          Topic: {lesson.topic}
+        </Text>
+      </View>
+    ))
+  ) : (
+    <View style={styles.emptyCard}>
+      <Text style={styles.emptyIcon}>📚</Text>
+      <Text style={styles.emptyTitle}>No lessons yet</Text>
+      <Text style={styles.emptyMessage}>
+        Lessons you create will appear here.
+      </Text>
+    </View>
+  )}
+</View>
+```
+
 
         <View style={styles.footer}>
           <Text style={styles.footerBrand}>TEACHER APP</Text>
@@ -382,8 +521,57 @@ fontWeight: '800',
 letterSpacing: 2,
 },
 footerText: {
-color: '#8A98A8',
-fontSize: 11,
-marginTop: 6,
+  color: '#8A98A8',
+  fontSize: 11,
+  marginTop: 6,
+},
+
+lessonCard: {
+  backgroundColor: '#FFFFFF',
+  borderWidth: 1,
+  borderColor: '#E7EDF4',
+  borderRadius: 16,
+  padding: 15,
+  marginBottom: 12,
+},
+
+lessonCardTop: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'flex-start',
+  gap: 10,
+},
+
+lessonTitle: {
+  flex: 1,
+  color: '#102A43',
+  fontSize: 14,
+  fontWeight: '800',
+},
+
+lessonStatusBadge: {
+  backgroundColor: '#E6F6F2',
+  paddingHorizontal: 9,
+  paddingVertical: 5,
+  borderRadius: 12,
+},
+
+lessonStatusText: {
+  color: '#0D806F',
+  fontSize: 10,
+  fontWeight: '800',
+  textTransform: 'capitalize',
+},
+
+lessonDetails: {
+  color: '#526579',
+  fontSize: 12,
+  marginTop: 10,
+},
+
+lessonTopic: {
+  color: '#718096',
+  fontSize: 12,
+  marginTop: 6,
 },
 });
