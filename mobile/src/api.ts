@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://10.67.190.187:8000';
+const API_BASE_URL = 'http://10.193.130.187:8000';
 
 export type UserRole = 'teacher' | 'student';
 
@@ -29,6 +29,7 @@ export async function loginUser(
       email: email.trim(),
       password,
     }),
+    
   });
 
   const data = await response.json().catch(() => null);
@@ -83,6 +84,70 @@ export interface LessonSummary {
   updated_at: string;
 }
 
+export interface TeacherLessonsResponse {
+page: number;
+limit: number;
+total: number;
+total_pages: number;
+lessons: LessonSummary[];
+}
+
+export interface GetTeacherLessonsParams {
+search?: string;
+status?: 'draft' | 'published' | 'archived';
+page?: number;
+limit?: number;
+}
+
+export async function getTeacherLessons(
+accessToken: string,
+params: GetTeacherLessonsParams = {},
+): Promise<TeacherLessonsResponse> {
+const queryParams = new URLSearchParams();
+
+if (params.search) {
+queryParams.append('search', params.search);
+}
+
+if (params.status) {
+queryParams.append('status', params.status);
+}
+
+queryParams.append('page', String(params.page ?? 1));
+queryParams.append('limit', String(params.limit ?? 100));
+
+const response = await fetch(
+`${API_BASE_URL}/lessons/?${queryParams.toString()}`,
+{
+method: 'GET',
+headers: {
+Accept: 'application/json',
+Authorization: `Bearer ${accessToken}`,
+},
+},
+);
+
+const data = await response.json().catch(() => null);
+
+if (!response.ok) {
+const detail =
+data?.detail ||
+data?.message ||
+`Unable to load lessons. Status: ${response.status}.`;
+
+
+throw new Error(
+  typeof detail === 'string'
+    ? detail
+    : 'Unable to load your lessons.',
+);
+
+
+}
+
+return data as TeacherLessonsResponse;
+}
+
 export async function getTeacherDashboard(
   accessToken: string,
 ): Promise<TeacherDashboardResponse> {
@@ -110,4 +175,52 @@ export async function getTeacherDashboard(
   }
 
   return data as TeacherDashboardResponse;
+}
+
+
+export type CreateLessonData = {
+title: string;
+subject: string;
+class_name: string;
+topic: string;
+content: string;
+status?: 'draft' | 'published' | 'archived';
+};
+
+export async function createTeacherLesson(
+accessToken: string,
+lesson: CreateLessonData,
+): Promise<LessonSummary> {
+const response = await fetch(`${API_BASE_URL}/lessons/`, {
+method: 'POST',
+headers: {
+Accept: 'application/json',
+'Content-Type': 'application/json',
+Authorization: `Bearer ${accessToken}`,
+},
+body: JSON.stringify({
+...lesson,
+status: lesson.status ?? 'draft',
+}),
+});
+
+const data = await response.json().catch(() => null);
+
+if (!response.ok) {
+const detail =
+data?.detail ||
+data?.message ||
+`Unable to create lesson. Status: ${response.status}.`;
+
+
+throw new Error(
+  typeof detail === 'string'
+    ? detail
+    : 'Unable to create your lesson.',
+);
+
+
+}
+
+return data as LessonSummary;
 }

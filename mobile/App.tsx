@@ -1,10 +1,11 @@
-
 import { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import * as SecureStore from 'expo-secure-store';
 import { loginUser } from './src/api';
 import TeacherDashboard from './src/screens/TeacherDashboard';
 import StudentDashboard from './src/screens/StudentDashboard';
+import MyLessonsScreen from './src/screens/MyLessonsScreen';
+import CreateLessonScreen from './src/screens/CreateLessonScreen';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -21,6 +22,9 @@ type UserRole = 'teacher' | 'student';
 
 export default function App() {
   const [role, setRole] = useState<UserRole>('teacher');
+  const [currentTeacherScreen, setCurrentTeacherScreen] = useState<
+  'dashboard' | 'lessons' | 'createLesson'
+>('dashboard');
 const [email, setEmail] = useState('');
 const [password, setPassword] = useState('');
 const [showPassword, setShowPassword] = useState(false);
@@ -109,14 +113,33 @@ const handleLogout = async () => {
 };
 
 if (signedInUser?.role === 'teacher') {
+  if (currentTeacherScreen === 'createLesson') {
+    return (
+      <CreateLessonScreen
+        onBack={() => setCurrentTeacherScreen('lessons')}
+        onLessonCreated={() => setCurrentTeacherScreen('lessons')}
+      />
+    );
+  }
+
+  if (currentTeacherScreen === 'lessons') {
+    return (
+      <MyLessonsScreen
+        onBack={() => setCurrentTeacherScreen('dashboard')}
+        onCreateLesson={() => setCurrentTeacherScreen('createLesson')}
+      />
+    );
+  }
+
   return (
     <TeacherDashboard
       fullName={signedInUser.full_name}
       onLogout={handleLogout}
+      onOpenLessons={() => setCurrentTeacherScreen('lessons')}
     />
   );
 }
-
+ 
 if (signedInUser?.role === 'student') {
   return (
     <StudentDashboard

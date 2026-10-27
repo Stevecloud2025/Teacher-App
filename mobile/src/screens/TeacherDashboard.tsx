@@ -17,8 +17,9 @@ import {
 } from 'react-native';
 
 type TeacherDashboardProps = {
-fullName: string;
-onLogout: () => void;
+  fullName: string;
+  onLogout: () => void;
+  onOpenLessons: () => void;
 };
 
 const quickActions = [
@@ -31,8 +32,9 @@ const quickActions = [
 ];
 
 export default function TeacherDashboard({
-fullName,
-onLogout,
+  fullName,
+  onLogout,
+  onOpenLessons,
 }: TeacherDashboardProps) {
 const firstName = fullName.trim().split(/\s+/)[0] || 'Teacher';
 
@@ -200,12 +202,16 @@ return (
                 style={styles.actionCard}
                 activeOpacity={0.8}
                 accessibilityRole="button"
-                onPress={() =>
-                 Alert.alert(
-                    action.title,
-                    'This feature will be connected in a future step.',
-                  )
-                }
+                onPress={() => {
+                  if (action.title === 'My Lessons') {
+                    onOpenLessons();
+                  } else {
+                    Alert.alert(
+                      action.title,
+                      'This feature will be connected in a future step.',
+                    );
+                  }
+                }}
               >
                 <View style={styles.actionIcon}>
                   <Text style={styles.actionEmoji}>{action.icon}</Text>
@@ -223,7 +229,7 @@ return (
           </View>
         </View>
 
-        ```tsx
+        
 <View style={styles.recentSection}>
   <View style={styles.sectionHeadingRow}>
     <Text style={styles.sectionTitle}>Recent Lessons</Text>
@@ -278,7 +284,6 @@ return (
     </View>
   )}
 </View>
-```
 
 
         <View style={styles.footer}>
